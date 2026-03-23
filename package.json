@@ -1,0 +1,14 @@
+{
+  "name": "gigachat",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"npm run dev --prefix backend\" \"npm run dev --prefix frontend\"",
+    "dev:back": "npm run dev --prefix backend",
+    "dev:front": "npm run dev --prefix frontend",
+    "start:back": "npm run start --prefix backend",
+    "build:front": "npm run build --prefix frontend"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.1"
+  }
+}
