@@ -14,13 +14,7 @@ const __dirname = path.dirname(__filename);
 const migrationsDir = path.resolve(__dirname, "..", "db", "migrations");
 
 function getDatabaseConfig() {
-  const {
-    DB_HOST = "localhost",
-    DB_PORT = "5432",
-    DB_NAME,
-    DB_USER,
-    DB_PASSWORD,
-  } = process.env;
+  const { DB_HOST = "localhost", DB_PORT = "5432", DB_NAME, DB_USER, DB_PASSWORD } = process.env;
 
   if (!DB_NAME || !DB_USER || !DB_PASSWORD) {
     throw new Error("Missing DB_NAME, DB_USER or DB_PASSWORD in .env");
@@ -70,7 +64,9 @@ async function applyMigration(pool, fileName) {
     console.log(`Applied migration ${version}`);
   } catch (error) {
     await pool.query("ROLLBACK");
-    throw new Error(`Failed migration ${version}: ${error.message}`);
+    throw new Error(`Failed migration ${version}: ${error.message}`, {
+      cause: error,
+    });
   }
 }
 
