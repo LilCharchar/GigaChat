@@ -140,3 +140,6 @@ vite.config.ts.timestamp-*
 
 .vscode
 node_modules
+
+# Local Docker database volumes
+volumes/
