@@ -5,8 +5,12 @@
   "type": "module",
   "main": "src/index.js",
   "scripts": {
-    "dev": "nodemon src/index.js",
-    "start": "node src/index.js"
+    "db:up": "docker compose --env-file .env -f docker-compose.yml up -d",
+    "db:down": "docker compose --env-file .env -f docker-compose.yml down",
+    "migrate": "node scripts/run-migrations.js",
+    "lint": "eslint .",
+    "dev": "npm run migrate && nodemon src/index.js",
+    "start": "npm run migrate && node src/index.js"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",
@@ -19,6 +23,10 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "nodemon": "^3.1.14"
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.1.0",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^17.4.0",
+    "nodemon": "3.1.14"
   }
 }

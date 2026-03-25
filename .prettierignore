@@ -1,0 +1,11 @@
+node_modules
+**/node_modules
+dist
+**/dist
+coverage
+**/coverage
+volumes
+*.log
+package-lock.json
+backend/package-lock.json
+frontend/package-lock.json
