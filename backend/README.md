@@ -2,7 +2,7 @@
 
 Documentacion inicial del backend enfocada en lo que hoy esta funcional:
 
-- Registro de usuarios
+- Registro de usuarioss
 - Login de usuarios con JWT en cookie HttpOnly
 - Middleware de autenticacion por cookie (`requireAuth`)
 - Endpoint de sesion actual (`GET /me`)
