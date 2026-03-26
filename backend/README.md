@@ -3,7 +3,10 @@
 Documentacion inicial del backend enfocada en lo que hoy esta funcional:
 
 - Registro de usuarios
-- Login de usuarios
+- Login de usuarios con JWT en cookie HttpOnly
+- Middleware de autenticacion por cookie (`requireAuth`)
+- Endpoint de sesion actual (`GET /me`)
+- Logout real (limpia cookie)
 - Base de datos PostgreSQL en Docker
 - Scripts relacionados a base de datos y ejecucion en desarrollo
 
@@ -23,11 +26,14 @@ Documentacion inicial del backend enfocada en lo que hoy esta funcional:
 
 2. Ajusta las variables en `backend/.env`:
    - `API_PORT`: puerto del backend (default `3000`)
+   - `NODE_ENV`: entorno (`development` o `production`)
+   - `FRONTEND_ORIGIN`: origen del frontend permitido por CORS (ej: `http://localhost:5173`)
    - `DB_HOST`: host de postgres (en local, normalmente `localhost`)
    - `DB_PORT`: puerto expuesto por postgres (default `5432`)
    - `DB_NAME`: nombre de la base de datos
    - `DB_USER`: usuario de la base de datos
    - `DB_PASSWORD`: password de la base de datos
+   - `JWT_SECRET`: secreto para firmar y verificar JWT
 
 ## 3) Levantar la base de datos con Docker
 
@@ -134,7 +140,7 @@ Errores comunes:
 
 ### `POST /login`
 
-Valida payload con Zod (`loginSchema`), busca usuario por email y compara hash con `bcrypt`.
+Valida payload con Zod (`loginSchema`), busca usuario por email, compara hash con `bcrypt` y setea cookie `access_token` (HttpOnly).
 
 Body esperado:
 
@@ -149,15 +155,51 @@ Respuesta exitosa (`200`):
 
 ```json
 {
-  "id": "uuid",
-  "username": "usuario_123",
-  "email": "correo@dominio.com"
+  "user": {
+    "id": "uuid",
+    "username": "usuario_123",
+    "email": "correo@dominio.com"
+  }
 }
 ```
+
+Ademas, el backend envia `Set-Cookie` con `access_token`.
 
 Error comun:
 
 - `401` con `Invalid credentials` si email no existe o password es incorrecta
+
+### `POST /logout`
+
+Limpia la cookie `access_token` y cierra la sesion del lado cliente.
+
+Respuesta exitosa (`200`):
+
+```json
+{
+  "message": "Logout successful"
+}
+```
+
+### `GET /me`
+
+Ruta protegida por middleware `requireAuth`. Lee la cookie `access_token`, verifica JWT y devuelve el usuario autenticado.
+
+Respuesta exitosa (`200`):
+
+```json
+{
+  "user": {
+    "id": "uuid",
+    "username": "usuario_123",
+    "email": "correo@dominio.com"
+  }
+}
+```
+
+Errores comunes:
+
+- `401` si no hay cookie o el token es invalido/expirado
 
 ## 7) Scripts utiles (backend)
 
@@ -179,6 +221,8 @@ Paso a paso:
 3. Ejecutar `npm run dev`
 4. Probar `POST /register`
 5. Probar `POST /login`
+6. Probar `GET /me` con la cookie devuelta por login
+7. Probar `POST /logout`
 
 ## 9) Ejemplos rapidos con cURL
 
@@ -195,10 +239,26 @@ Login:
 ```bash
 curl -X POST http://localhost:3000/login \
   -H "Content-Type: application/json" \
+  -c cookies.txt \
   -d '{"email":"ana@mail.com","password":"12345678"}'
+```
+
+Sesion actual (`/me`) usando cookie guardada:
+
+```bash
+curl -X GET http://localhost:3000/me \
+  -b cookies.txt
+```
+
+Logout usando cookie guardada:
+
+```bash
+curl -X POST http://localhost:3000/logout \
+  -b cookies.txt
 ```
 
 ## 10) Estado actual y alcance
 
-- Solo `register` y `login` estan operativos con persistencia en PostgreSQL.
-- Existe ruta `POST /logout`, pero actualmente es placeholder y no implementa cierre de sesion real.
+- `register`, `login`, `logout` y `me` estan operativos con persistencia en PostgreSQL.
+- La autenticacion web actual usa JWT en cookie HttpOnly.
+- Para frontend en otro origen, CORS esta habilitado con credenciales mediante `FRONTEND_ORIGIN`.

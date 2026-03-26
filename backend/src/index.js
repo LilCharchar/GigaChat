@@ -1,5 +1,7 @@
 import express from "express";
 import dotenv from "dotenv";
+import cors from "cors";
+import cookieParser from "cookie-parser";
 import authRoutes from "./auth/routes.js";
 import pool from "./config/db.js";
 
@@ -7,9 +9,17 @@ dotenv.config();
 
 const app = express();
 const PORT = Number(process.env.API_PORT) || 3000;
+const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN || "http://localhost:5173";
 
-//midleware
+// middleware
+app.use(
+  cors({
+    origin: FRONTEND_ORIGIN,
+    credentials: true,
+  })
+);
 app.use(express.json());
+app.use(cookieParser());
 
 app.use(authRoutes);
 

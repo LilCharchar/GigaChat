@@ -1,5 +1,16 @@
 import pool from "../config/db.js";
 import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
+
+const ACCESS_TOKEN_EXPIRES_IN = "1h";
+
+export function getJwtSecret() {
+  if (!process.env.JWT_SECRET) {
+    throw new Error("Missing JWT_SECRET");
+  }
+
+  return process.env.JWT_SECRET;
+}
 
 const register = async (data) => {
   const { name, username, email, password } = data;
@@ -47,11 +58,28 @@ const login = async (data) => {
     throw new Error("Invalid credentials");
   }
 
+  const token = jwt.sign({ id: user.id, username: user.username }, getJwtSecret(), {
+    expiresIn: ACCESS_TOKEN_EXPIRES_IN,
+  });
+
   return {
-    id: user.id,
-    username: user.username,
-    email: user.email,
+    user: {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+    },
+    token,
   };
 };
 
-export default { register, login };
+const getCurrentUser = async (id) => {
+  const result = await pool.query("SELECT id, username, email FROM users WHERE id = $1", [id]);
+
+  if (result.rows.length === 0) {
+    throw new Error("User not found");
+  }
+
+  return result.rows[0];
+};
+
+export default { register, login, getCurrentUser };
