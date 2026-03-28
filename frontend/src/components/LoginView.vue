@@ -1,196 +1,140 @@
-<script setup>
+﻿<script setup>
 import { ref } from "vue";
-import api from "../services/api";
+import { storeToRefs } from "pinia";
+import { useRouter } from "vue-router";
+import { useAuthStore } from "../stores/auth";
 
-const emit = defineEmits(["logged-in"]);
+import "./css/login.css";
 
-const email = ref("");
+const router    = useRouter();
+const authStore = useAuthStore();
+const { loadingAuth, error } = storeToRefs(authStore);
+
+const email    = ref("");
 const password = ref("");
-const error = ref("");
-const loading = ref(false);
-
-const getErrorMessage = (err) => {
-  if (err?.response?.data?.error) {
-    return err.response.data.error;
-  }
-
-  if (err?.message) {
-    return err.message;
-  }
-
-  return "No fue posible iniciar sesion. Intenta otra vez.";
-};
 
 const submitLogin = async () => {
-  error.value = "";
+  authStore.clearError();
 
   if (!email.value.trim() || !password.value) {
-    error.value = "Completa correo y contrasena para continuar.";
+    authStore.setError("Completa correo y contrasena para continuar.");
     return;
   }
 
-  loading.value = true;
+  const ok = await authStore.login({
+    email:    email.value.trim(),
+    password: password.value,
+  });
 
-  try {
-    const response = await api.post("/login", {
-      email: email.value.trim(),
-      password: password.value,
-    });
-
-    const user = response?.data?.user;
-
-    if (!user) {
-      throw new Error("No se recibio el usuario autenticado.");
-    }
-
-    emit("logged-in", user);
-  } catch (err) {
-    error.value = getErrorMessage(err);
-  } finally {
-    loading.value = false;
+  if (ok) {
+    router.push("/dashboard");
   }
 };
 </script>
 
 <template>
-  <main class="login-page">
-    <section class="login-card">
-      <p class="eyebrow">GigaChat</p>
-      <h1>Bienvenido de vuelta</h1>
-      <p class="subtitle">Inicia sesion para entrar a tu espacio.</p>
+  <main class="gl-page">
+    <!-- Watermark tipogrÃ¡fico gigante â€” identidad visual GigaChat -->
+    <div class="gl-watermark" aria-hidden="true">G</div>
 
-      <form class="form" @submit.prevent="submitLogin">
-        <label for="email">Correo electronico</label>
-        <input
-          id="email"
-          v-model="email"
-          type="email"
-          placeholder="tu_correo@dominio.com"
-          autocomplete="username"
-        />
+    <!-- Layout centrado -->
+    <div class="gl-layout">
 
-        <label for="password">Contrasena</label>
-        <input
-          id="password"
-          v-model="password"
-          type="password"
-          placeholder="Tu contrasena"
-          autocomplete="current-password"
-        />
+      <!-- Header editorial -->
+      <header class="gl-header">
+        <!-- Logo mark -->
+        <div class="gl-logo">
+          <span class="gl-logo-glyph">G</span>
+          <span class="gl-logo-label">Gigachat</span>
+        </div>
 
-        <button class="submit" type="submit" :disabled="loading">
-          {{ loading ? "Validando acceso..." : "Entrar" }}
+        <!-- Eyebrow + headline -->
+        <p class="gl-eyebrow">Acceso seguro</p>
+        <h1 class="gl-headline">
+          Bienvenido<br />de vuelta.
+        </h1>
+        <p class="gl-subtitle">
+          Inicia sesiÃ³n para entrar a tu espacio.
+        </p>
+      </header>
+
+      <!-- Formulario -->
+      <form class="gl-form" @submit.prevent="submitLogin" novalidate>
+
+        <!-- Correo electrÃ³nico -->
+        <div class="gl-field">
+          <label class="gl-label" for="email">
+            Correo electrÃ³nico
+          </label>
+          <input
+            id="email"
+            class="gl-input"
+            v-model="email"
+            type="email"
+            placeholder="tu_correo@dominio.com"
+            autocomplete="username"
+            :disabled="loadingAuth"
+            required
+          />
+        </div>
+
+        <!-- ContraseÃ±a -->
+        <div class="gl-field gl-field-last">
+          <label class="gl-label" for="password">
+            ContraseÃ±a
+          </label>
+          <input
+            id="password"
+            class="gl-input"
+            v-model="password"
+            type="password"
+            placeholder="Tu contrasena"
+            autocomplete="current-password"
+            :disabled="loadingAuth"
+            required
+          />
+        </div>
+
+        <!-- Submit -->
+        <button
+          class="gl-submit"
+          :class="{ loading: loadingAuth }"
+          type="submit"
+          :disabled="loadingAuth"
+        >
+          <span v-if="loadingAuth" class="gl-spinner" aria-hidden="true" />
+          <span>{{ loadingAuth ? "Validando acceso..." : "Entrar" }}</span>
         </button>
+
       </form>
 
-      <p v-if="error" class="error">{{ error }}</p>
-      <p class="hint">Conecta con tu backend en <code>VITE_API_URL</code> (por defecto usa http://localhost:3000).</p>
-    </section>
+      <!-- Error -->
+      <div v-if="error" class="gl-error" role="alert">
+        <div class="gl-error-dot" aria-hidden="true" />
+        <p class="gl-error-text">{{ error }}</p>
+      </div>
+
+      <!-- Hint -->
+      <div class="gl-hint">
+        <p class="gl-hint-text">
+          Conecta con tu backend en
+          <code>VITE_API_URL</code>
+          &nbsp;Â·&nbsp; por defecto&nbsp;
+          <code>http://localhost:3000</code>
+        </p>
+      </div>
+
+    </div>
+
+    <!-- Barra de status inferior -->
+    <footer class="gl-bottom" aria-hidden="true">
+      <span class="gl-bottom-left">GigaChat Â· v1.0</span>
+      <span class="gl-bottom-right">
+        <span class="gl-status-dot" />
+        sistema operativo
+      </span>
+    </footer>
   </main>
 </template>
 
-<style scoped>
-.login-page {
-  min-height: 100vh;
-  display: grid;
-  place-items: center;
-  padding: 24px;
-  background:
-    radial-gradient(circle at 0% 0%, #ffe3b8 0%, transparent 45%),
-    radial-gradient(circle at 100% 100%, #d2f2ff 0%, transparent 45%),
-    #f7f7f8;
-}
 
-.login-card {
-  width: min(440px, 100%);
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 18px;
-  padding: 28px;
-  box-shadow: 0 16px 40px rgba(17, 24, 39, 0.12);
-}
-
-.eyebrow {
-  margin: 0;
-  font-weight: 800;
-  color: #b45309;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  font-size: 12px;
-}
-
-h1 {
-  margin: 10px 0 8px;
-  color: #111827;
-  font-size: 30px;
-  line-height: 1.1;
-}
-
-.subtitle {
-  margin: 0 0 20px;
-  color: #4b5563;
-}
-
-.form {
-  display: grid;
-  gap: 10px;
-}
-
-label {
-  font-weight: 700;
-  color: #1f2937;
-  font-size: 14px;
-}
-
-input {
-  border: 1px solid #d1d5db;
-  border-radius: 10px;
-  padding: 11px 12px;
-  font-size: 15px;
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
-
-input:focus {
-  outline: none;
-  border-color: #ea580c;
-  box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.15);
-}
-
-.submit {
-  margin-top: 6px;
-  border: 0;
-  border-radius: 10px;
-  padding: 12px 14px;
-  background: linear-gradient(135deg, #ea580c, #f97316);
-  color: #ffffff;
-  font-weight: 800;
-  cursor: pointer;
-}
-
-.submit:disabled {
-  opacity: 0.65;
-  cursor: not-allowed;
-}
-
-.error {
-  margin: 12px 0 0;
-  padding: 10px 12px;
-  border-radius: 10px;
-  background: #fff1f2;
-  border: 1px solid #fecdd3;
-  color: #be123c;
-  font-weight: 600;
-}
-
-.hint {
-  margin: 14px 0 0;
-  font-size: 13px;
-  color: #6b7280;
-}
-
-code {
-  background: #f3f4f6;
-  padding: 2px 6px;
-  border-radius: 6px;
-}
-</style>

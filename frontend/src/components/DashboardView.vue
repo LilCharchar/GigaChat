@@ -1,19 +1,21 @@
 <script setup>
-const props = defineProps({
-  user: {
-    type: Object,
-    required: true,
-  },
-  loadingLogout: {
-    type: Boolean,
-    default: false,
-  },
-});
+import { computed } from "vue";
+import { storeToRefs } from "pinia";
+import { useRouter } from "vue-router";
+import { useAuthStore } from "../stores/auth";
 
-const emit = defineEmits(["logout"]);
+const router = useRouter();
+const authStore = useAuthStore();
+const { user, loadingAuth } = storeToRefs(authStore);
 
-const emitLogout = () => {
-  emit("logout");
+const currentUser = computed(() => user.value ?? {});
+
+const handleLogout = async () => {
+  const ok = await authStore.logout();
+
+  if (ok) {
+    router.push("/login");
+  }
 };
 </script>
 
@@ -21,23 +23,23 @@ const emitLogout = () => {
   <main class="dashboard-page">
     <section class="dashboard-card">
       <p class="tag">Sesion activa</p>
-      <h1>Bienvenido, {{ props.user.username }}</h1>
+      <h1>Bienvenido, {{ currentUser.username }}</h1>
       <p class="subtitle">Esta es una vista privada de muestra despues del login.</p>
 
       <div class="grid">
         <article class="stat">
           <h2>ID</h2>
-          <p>{{ props.user.id }}</p>
+          <p>{{ currentUser.id }}</p>
         </article>
 
         <article class="stat">
           <h2>Email</h2>
-          <p>{{ props.user.email }}</p>
+          <p>{{ currentUser.email }}</p>
         </article>
       </div>
 
-      <button class="logout" :disabled="props.loadingLogout" @click="emitLogout">
-        {{ props.loadingLogout ? "Cerrando sesion..." : "Cerrar sesion" }}
+      <button class="logout" :disabled="loadingAuth" @click="handleLogout">
+        {{ loadingAuth ? "Cerrando sesion..." : "Cerrar sesion" }}
       </button>
     </section>
   </main>
