@@ -87,6 +87,7 @@ function clearError() {
     </section>
 
     <main class="lv-panel">
+      <div class="lv-panel-glow" aria-hidden="true"></div>
       <div class="lv-panel-inner" :class="{ 'is-shaking': shake }">
         <header class="lv-header">
           <p class="lv-panel-kicker">Acceso privado</p>
@@ -318,21 +319,57 @@ function clearError() {
   justify-content: center;
   padding: 2rem;
   background:
-    radial-gradient(circle at top left, rgba(208, 255, 47, 0.1), transparent 22%),
-    linear-gradient(180deg, rgba(14, 14, 14, 0.96), rgba(7, 7, 7, 1));
+    radial-gradient(circle at 18% 12%, rgba(208, 255, 47, 0.11), transparent 18%),
+    radial-gradient(circle at 82% 78%, rgba(208, 255, 47, 0.06), transparent 24%),
+    linear-gradient(180deg, rgba(16, 16, 16, 0.94), rgba(7, 7, 7, 1));
   border-left: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.lv-panel-glow {
+  position: absolute;
+  inset: 12% 16% auto;
+  height: 15rem;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(208, 255, 47, 0.12), transparent 68%);
+  filter: blur(36px);
+  opacity: 0.85;
+  pointer-events: none;
 }
 
 .lv-panel-inner {
   width: min(100%, 29rem);
-  padding: 2rem 2rem 1.5rem;
-  background: var(--lv-surface);
-  border: 1px solid var(--lv-border);
+  padding: 2.2rem 2.2rem 1.6rem;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.012)),
+    rgba(10, 10, 10, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   backdrop-filter: blur(18px);
-  box-shadow: 0 18px 70px rgba(0, 0, 0, 0.42);
+  box-shadow:
+    0 30px 90px rgba(0, 0, 0, 0.46),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
   transform: translateY(32px);
   opacity: 0;
   transition: transform 0.8s ease 0.3s, opacity 0.8s ease 0.3s;
+  overflow: hidden;
+}
+
+.lv-panel-inner::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(208, 255, 47, 0.35), transparent);
+  opacity: 0.9;
+}
+
+.lv-panel-inner::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at top left, rgba(255, 255, 255, 0.04), transparent 28%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.015), transparent 45%);
+  pointer-events: none;
 }
 
 .lv-panel-inner.is-shaking {
@@ -340,28 +377,40 @@ function clearError() {
 }
 
 .lv-header {
-  margin-bottom: 1.6rem;
+  margin-bottom: 1.85rem;
 }
 
 .lv-panel-kicker {
-  margin: 0 0 0.55rem;
+  margin: 0 0 0.7rem;
   color: var(--lv-accent);
   font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.lv-panel-kicker::before {
+  content: "";
+  width: 1.8rem;
+  height: 1px;
+  background: rgba(208, 255, 47, 0.65);
 }
 
 .lv-title {
   margin: 0;
   font-family: "Archivo Black", sans-serif;
-  font-size: clamp(2rem, 5vw, 2.8rem);
-  line-height: 0.95;
+  font-size: clamp(2.15rem, 5vw, 2.95rem);
+  line-height: 0.9;
   text-transform: uppercase;
-  letter-spacing: -0.04em;
+  letter-spacing: -0.05em;
+  text-wrap: balance;
 }
 
 .lv-subtitle {
-  margin: 0.8rem 0 0;
-  color: var(--lv-muted);
-  line-height: 1.6;
+  margin: 0.9rem 0 0;
+  max-width: 17rem;
+  color: rgba(245, 245, 245, 0.72);
+  line-height: 1.7;
 }
 
 .lv-alert {
@@ -380,7 +429,7 @@ function clearError() {
 .lv-form {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 1.05rem;
 }
 
 .lv-field {
@@ -390,23 +439,30 @@ function clearError() {
 }
 
 .lv-label {
-  font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.8);
-  letter-spacing: 0.05em;
+  font-size: 0.76rem;
+  color: rgba(255, 255, 255, 0.84);
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
 .lv-input-shell {
   position: relative;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.028), rgba(255, 255, 255, 0.015)),
+    rgba(255, 255, 255, 0.028);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
   transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 }
 
 .lv-input-shell:focus-within {
   border-color: rgba(208, 255, 47, 0.55);
-  background: rgba(255, 255, 255, 0.06);
-  box-shadow: 0 0 0 4px rgba(208, 255, 47, 0.08);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.018)),
+    rgba(255, 255, 255, 0.04);
+  box-shadow:
+    0 0 0 4px rgba(208, 255, 47, 0.08),
+    0 10px 28px rgba(0, 0, 0, 0.24);
 }
 
 .lv-field.has-error .lv-input-shell {
@@ -417,7 +473,7 @@ function clearError() {
   width: 100%;
   border: 0;
   outline: 0;
-  padding: 1rem 1rem;
+  padding: 1.05rem 1rem;
   color: var(--lv-text);
   background: transparent;
   font: inherit;
@@ -447,6 +503,12 @@ function clearError() {
   color: var(--lv-accent);
   font-weight: 700;
   cursor: pointer;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.lv-toggle:hover {
+  opacity: 0.82;
+  transform: translateY(-50%) scale(0.98);
 }
 
 .lv-feedback {
@@ -456,27 +518,33 @@ function clearError() {
 }
 
 .lv-submit {
-  margin-top: 0.5rem;
+  margin-top: 0.65rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.7rem;
   width: 100%;
-  min-height: 3.4rem;
+  min-height: 3.55rem;
   border: 0;
-  background: var(--lv-accent);
+  background: linear-gradient(180deg, #d7ff43 0%, #c5ff00 100%);
   color: #070707;
   font: inherit;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.25s ease;
+  box-shadow:
+    0 12px 30px rgba(197, 255, 0, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  transition: transform 0.15s ease, box-shadow 0.25s ease, filter 0.25s ease;
 }
 
 .lv-submit:hover {
   transform: translateY(-1px);
-  box-shadow: 0 14px 40px rgba(208, 255, 47, 0.28);
+  box-shadow:
+    0 18px 44px rgba(208, 255, 47, 0.26),
+    inset 0 1px 0 rgba(255, 255, 255, 0.45);
+  filter: saturate(1.05);
 }
 
 .lv-submit:disabled {
@@ -496,13 +564,13 @@ function clearError() {
 .lv-footer-copy {
   justify-content: space-between;
   gap: 1rem;
-  margin-top: 1.25rem;
-  padding-top: 1rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.46);
-  font-size: 0.76rem;
+  margin-top: 1.45rem;
+  padding-top: 1.1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.09);
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.72rem;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.12em;
 }
 
 .lv-error-enter-active,
@@ -576,6 +644,10 @@ function clearError() {
   .lv-panel-inner {
     width: 100%;
     padding: 1.4rem;
+  }
+
+  .lv-panel-glow {
+    inset: 8% 10% auto;
   }
 }
 
