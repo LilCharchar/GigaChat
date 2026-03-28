@@ -1,6 +1,6 @@
 <script setup>
 import cursorImage from "../assets/gigachad_cursor.png";
-import "../assets/global-pin-cursor.css";
+import "../assets/css/global-pin-cursor.css";
 import { useGlobalCursor } from "../composables/useGlobalCursor";
 
 const { cursorVisible, cursorX, cursorY, customCursorEnabled } = useGlobalCursor();

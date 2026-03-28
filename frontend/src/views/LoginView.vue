@@ -1,6 +1,6 @@
 <script setup>
 import gigachadHero from "../assets/gigachad-login.gif";
-import "../assets/login-view.css";
+import "../assets/css/login-view.css";
 import { useLoginView } from "../composables/useLoginView";
 
 const {
