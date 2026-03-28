@@ -1,15 +1,10 @@
 <script setup>
-import gigachadCursor from "../assets/gigachad_cursor.png";
 import gigachadHero from "../assets/gigachad-login.gif";
 import "../assets/login-view.css";
 import { useLoginView } from "../composables/useLoginView";
 
 const {
   clearError,
-  cursorVisible,
-  cursorX,
-  cursorY,
-  customCursorEnabled,
   email,
   error,
   handleSubmit,
@@ -28,10 +23,7 @@ const {
   <div
     class="lv-page"
     :class="{ 'is-visible': mounted }"
-    :style="{
-      '--lv-hero-image': `url(${gigachadHero})`,
-      '--lv-cursor-image': `url(${gigachadCursor})`,
-    }"
+    :style="{ '--lv-hero-image': `url(${gigachadHero})` }"
   >
     <section class="lv-hero">
       <div class="lv-hero-media" aria-hidden="true"></div>
@@ -151,17 +143,5 @@ const {
       </div>
     </main>
 
-    <div
-      v-if="customCursorEnabled"
-      class="lv-cursor"
-      :class="{ 'is-visible': cursorVisible }"
-      :style="{
-        left: `${cursorX}px`,
-        top: `${cursorY}px`,
-      }"
-      aria-hidden="true"
-    >
-      <span class="lv-cursor-face"></span>
-    </div>
   </div>
 </template>
