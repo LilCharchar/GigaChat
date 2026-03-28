@@ -1,134 +1,113 @@
 <script setup>
-import { computed } from "vue";
-import { storeToRefs } from "pinia";
-import { useRouter } from "vue-router";
-import { useAuthStore } from "../stores/auth";
+import "../assets/css/dashboard-view.css";
+import { useDashboardView } from "../composables/useDashboardView";
 
-const router = useRouter();
-const authStore = useAuthStore();
-const { user, loadingAuth } = storeToRefs(authStore);
-
-const currentUser = computed(() => user.value ?? {});
-
-const handleLogout = async () => {
-  const ok = await authStore.logout();
-
-  if (ok) {
-    router.push("/login");
-  }
-};
+const {
+  activeConversation,
+  activeConversationId,
+  activeMessages,
+  activeRoster,
+  conversations,
+  currentUser,
+  draft,
+  handleLogout,
+  loadingAuth,
+  selectConversation,
+  sendMessage,
+} = useDashboardView();
 </script>
 
 <template>
-  <main class="dashboard-page">
-    <section class="dashboard-card">
-      <p class="tag">Sesion activa</p>
-      <h1>Bienvenido, {{ currentUser.username }}</h1>
-      <p class="subtitle">Esta es una vista privada de muestra despues del login.</p>
-
-      <div class="grid">
-        <article class="stat">
-          <h2>ID</h2>
-          <p>{{ currentUser.id }}</p>
-        </article>
-
-        <article class="stat">
-          <h2>Email</h2>
-          <p>{{ currentUser.email }}</p>
-        </article>
+  <main class="dv-shell">
+    <aside class="dv-sidebar">
+      <div class="dv-brand">
+        <p class="dv-eyebrow">Gigachat</p>
+        <h1>Chadline</h1>
       </div>
 
-      <button class="logout" :disabled="loadingAuth" @click="handleLogout">
-        {{ loadingAuth ? "Cerrando sesion..." : "Cerrar sesion" }}
+      <section class="dv-user">
+        <div class="dv-user-mark">
+          {{ (currentUser.username || currentUser.email || "G").slice(0, 1).toUpperCase() }}
+        </div>
+        <div>
+          <strong>{{ currentUser.username || "Operador" }}</strong>
+          <p>{{ currentUser.email || "sin-correo" }}</p>
+        </div>
+      </section>
+
+      <section class="dv-list-block">
+        <div class="dv-head">
+          <span>Canales</span>
+          <span>{{ conversations.length }}</span>
+        </div>
+
+        <button
+          v-for="conversation in conversations"
+          :key="conversation.id"
+          class="dv-room"
+          :class="{ 'is-active': conversation.id === activeConversationId }"
+          type="button"
+          @click="selectConversation(conversation.id)"
+        >
+          <strong>{{ conversation.name }}</strong>
+          <span>{{ conversation.unread || conversation.members }}</span>
+        </button>
+      </section>
+
+      <button class="dv-logout" :disabled="loadingAuth" type="button" @click="handleLogout">
+        {{ loadingAuth ? "Saliendo..." : "Cerrar sesion" }}
       </button>
+    </aside>
+
+    <section class="dv-main">
+      <header class="dv-top">
+        <div class="dv-hero">
+          <div class="dv-hero-copy">
+            <p class="dv-eyebrow">Chat</p>
+            <h2>{{ activeConversation.name }}</h2>
+          </div>
+        </div>
+
+        <aside class="dv-friends">
+          <div class="dv-head">
+            <span>Amigos</span>
+            <span>{{ activeRoster.length }}</span>
+          </div>
+
+          <article v-for="member in activeRoster" :key="member.name" class="dv-friend">
+            <div class="dv-friend-mark">{{ member.initials }}</div>
+            <strong>{{ member.name }}</strong>
+            <span class="dv-friend-dot" :class="{ 'is-live': member.online }"></span>
+          </article>
+        </aside>
+      </header>
+
+      <section class="dv-chat">
+        <div class="dv-messages">
+          <article
+            v-for="message in activeMessages"
+            :key="message.id"
+            class="dv-message"
+            :class="{ 'is-own': message.own }"
+          >
+            <div class="dv-message-mark">{{ message.initials }}</div>
+            <div class="dv-bubble">
+              <strong>{{ message.author }}</strong>
+              <p>{{ message.text }}</p>
+            </div>
+          </article>
+        </div>
+
+        <form class="dv-composer" @submit.prevent="sendMessage">
+          <textarea
+            v-model="draft"
+            class="dv-input"
+            rows="1"
+            placeholder="Escribe un mensaje"
+          ></textarea>
+          <button class="dv-send" type="submit">Enviar</button>
+        </form>
+      </section>
     </section>
   </main>
 </template>
-
-<style scoped>
-.dashboard-page {
-  min-height: 100vh;
-  display: grid;
-  place-items: center;
-  padding: 24px;
-  background: radial-gradient(circle at 20% 20%, #ffe8c4 0%, #fff8ea 38%, #f4f6fb 100%);
-}
-
-.dashboard-card {
-  width: min(760px, 100%);
-  background: #ffffff;
-  border: 1px solid #ece7dd;
-  border-radius: 16px;
-  padding: 30px;
-  box-shadow: 0 18px 36px rgba(0, 0, 0, 0.1);
-}
-
-.tag {
-  display: inline-block;
-  background: #fff3dc;
-  color: #885c00;
-  padding: 6px 10px;
-  border-radius: 999px;
-  font-weight: 700;
-  margin-bottom: 10px;
-}
-
-h1 {
-  margin: 0;
-  color: #1f2937;
-}
-
-.subtitle {
-  color: #4b5563;
-  margin: 10px 0 22px;
-}
-
-.grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.stat {
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  padding: 14px;
-  background: #fafafa;
-}
-
-.stat h2 {
-  margin: 0 0 8px;
-  font-size: 13px;
-  text-transform: uppercase;
-  color: #6b7280;
-  letter-spacing: 0.04em;
-}
-
-.stat p {
-  margin: 0;
-  word-break: break-all;
-  color: #111827;
-}
-
-.logout {
-  margin-top: 22px;
-  border: 0;
-  border-radius: 10px;
-  padding: 11px 15px;
-  background: #111827;
-  color: #ffffff;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.logout:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-@media (max-width: 700px) {
-  .grid {
-    grid-template-columns: 1fr;
-  }
-}
-</style>
