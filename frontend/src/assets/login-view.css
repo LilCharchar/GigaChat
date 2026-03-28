@@ -23,6 +23,11 @@ body {
   overflow: hidden;
 }
 
+.lv-page,
+.lv-page * {
+  cursor: none;
+}
+
 .lv-hero,
 .lv-panel {
   position: relative;
@@ -70,6 +75,9 @@ body {
     linear-gradient(90deg, rgba(7, 7, 7, 0.08), rgba(7, 7, 7, 0.36) 36%, rgba(7, 7, 7, 0.8) 100%),
     linear-gradient(180deg, rgba(7, 7, 7, 0.04), rgba(7, 7, 7, 0.26) 58%, rgba(7, 7, 7, 0.9) 100%),
     radial-gradient(circle at 18% 22%, rgba(208, 255, 47, 0.12), transparent 24%);
+  transform: translate3d(0, 0, 0) scale(1.02);
+  animation: lv-green-haze-drift 13.5s ease-in-out infinite alternate;
+  will-change: transform;
 }
 
 .lv-hero-content {
@@ -149,6 +157,9 @@ body {
   filter: blur(36px);
   opacity: 0.85;
   pointer-events: none;
+  transform: translate3d(0, 0, 0);
+  animation: lv-panel-haze-drift 10.5s ease-in-out infinite alternate;
+  will-change: transform, opacity;
 }
 
 .lv-panel-inner {
@@ -357,7 +368,7 @@ body {
 .lv-input:disabled,
 .lv-toggle:disabled,
 .lv-submit:disabled {
-  cursor: not-allowed;
+  cursor: none;
 }
 
 .lv-input-shell--password .lv-input {
@@ -373,7 +384,7 @@ body {
   background: transparent;
   color: var(--lv-accent);
   font-weight: 700;
-  cursor: pointer;
+  cursor: none;
   transition: opacity 0.2s ease, transform 0.2s ease;
 }
 
@@ -403,7 +414,7 @@ body {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  cursor: pointer;
+  cursor: none;
   box-shadow:
     0 12px 30px rgba(197, 255, 0, 0.18),
     inset 0 1px 0 rgba(255, 255, 255, 0.35);
@@ -450,6 +461,38 @@ body {
   letter-spacing: 0.12em;
 }
 
+.lv-cursor {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 80;
+  width: 3.1rem;
+  height: 3.45rem;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate3d(-14%, -10%, 0);
+  transition: opacity 0.12s ease;
+}
+
+.lv-cursor.is-visible {
+  opacity: 1;
+}
+
+.lv-cursor-face {
+  position: absolute;
+  inset: 0;
+  background-image: var(--lv-cursor-image);
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center center;
+  filter:
+    grayscale(1)
+    contrast(1.06)
+    brightness(0.96)
+    drop-shadow(0 0 8px rgba(208, 255, 47, 0.16))
+    drop-shadow(0 8px 14px rgba(0, 0, 0, 0.22));
+}
+
 .lv-error-enter-active,
 .lv-feedback-enter-active {
   animation: lv-slide-down 0.22s ease;
@@ -494,7 +537,47 @@ body {
   }
 }
 
+@keyframes lv-green-haze-drift {
+  0% {
+    transform: translate3d(-1.5%, -1%, 0) scale(1.02);
+  }
+  50% {
+    transform: translate3d(1.2%, 0.8%, 0) scale(1.05);
+  }
+  100% {
+    transform: translate3d(0.6%, -0.6%, 0) scale(1.03);
+  }
+}
+
+@keyframes lv-panel-haze-drift {
+  0% {
+    transform: translate3d(-10px, -6px, 0) scale(0.98);
+    opacity: 0.7;
+  }
+  50% {
+    transform: translate3d(8px, 10px, 0) scale(1.04);
+    opacity: 0.9;
+  }
+  100% {
+    transform: translate3d(14px, -4px, 0) scale(1.01);
+    opacity: 0.78;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lv-hero-gradient,
+  .lv-panel-glow {
+    animation: none;
+    transform: none;
+  }
+}
+
 @media (max-width: 960px) {
+  .lv-page,
+  .lv-page * {
+    cursor: auto;
+  }
+
   .lv-page {
     grid-template-columns: 1fr;
   }
