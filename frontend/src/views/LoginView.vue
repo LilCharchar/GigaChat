@@ -1,13 +1,20 @@
 <script setup>
-import gigachadHero from "../assets/gigachad-login.gif";
+import gigachadHero from "../assets/gigachad-login-12s.mp4";
 import "../assets/css/login-view.css";
 import { useLoginView } from "../composables/useLoginView";
 
 const {
+  audioAvailable,
+  audioRef,
   clearError,
   email,
   error,
+  handleAudioError,
+  handleAudioTimeUpdate,
+  handleHeroLoad,
   handleSubmit,
+  heroVideoRef,
+  isAudioMuted,
   isEmailValid,
   isPasswordValid,
   loadingAuth,
@@ -16,17 +23,36 @@ const {
   shake,
   showPassword,
   submitted,
+  toggleAudio,
 } = useLoginView();
 </script>
 
 <template>
-  <div
-    class="lv-page"
-    :class="{ 'is-visible': mounted }"
-    :style="{ '--lv-hero-image': `url(${gigachadHero})` }"
-  >
+  <div class="lv-page" :class="{ 'is-visible': mounted }">
+    <button
+      class="lv-audio-toggle"
+      type="button"
+      :disabled="!audioAvailable"
+      :aria-label="isAudioMuted ? 'Activar musica' : 'Silenciar musica'"
+      :title="isAudioMuted ? 'Activar musica' : 'Silenciar musica'"
+      @click="toggleAudio"
+    >
+      <span aria-hidden="true">{{ isAudioMuted ? "♪" : "♫" }}</span>
+    </button>
+
     <section class="lv-hero">
-      <div class="lv-hero-media" aria-hidden="true"></div>
+      <video
+        ref="heroVideoRef"
+        class="lv-hero-media"
+        :src="gigachadHero"
+        muted
+        autoplay
+        loop
+        playsinline
+        preload="auto"
+        aria-hidden="true"
+        @loadeddata="handleHeroLoad"
+      ></video>
       <div class="lv-hero-noise" aria-hidden="true"></div>
       <div class="lv-hero-gradient" aria-hidden="true"></div>
 
@@ -143,5 +169,13 @@ const {
       </div>
     </main>
 
+    <audio
+      ref="audioRef"
+      class="lv-audio"
+      preload="auto"
+      src="/audio/can-you-feel-my-heart.mp3"
+      @error="handleAudioError"
+      @timeupdate="handleAudioTimeUpdate"
+    ></audio>
   </div>
 </template>
