@@ -1,7 +1,11 @@
 <script setup>
-import HelloWorld from "./components/HelloWorld.vue";
+import GlobalPinCursor from "./components/GlobalPinCursor.vue";
+import { RouterView } from "vue-router";
 </script>
 
 <template>
-  <HelloWorld />
+  <div class="app-shell">
+    <RouterView />
+    <GlobalPinCursor />
+  </div>
 </template>

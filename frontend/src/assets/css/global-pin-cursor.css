@@ -1,0 +1,43 @@
+.app-shell,
+.app-shell * {
+  cursor: none !important;
+}
+
+.gcursor {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 9999;
+  width: 3.1rem;
+  height: 3.45rem;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate3d(-14%, -10%, 0);
+  transition: opacity 0.12s ease;
+}
+
+.gcursor.is-visible {
+  opacity: 1;
+}
+
+.gcursor-face {
+  position: absolute;
+  inset: 0;
+  background-image: var(--gcursor-image);
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center center;
+  filter:
+    grayscale(1)
+    contrast(1.06)
+    brightness(0.96)
+    drop-shadow(0 0 8px rgba(208, 255, 47, 0.16))
+    drop-shadow(0 8px 14px rgba(0, 0, 0, 0.22));
+}
+
+@media (max-width: 960px) {
+  .app-shell,
+  .app-shell * {
+    cursor: auto !important;
+  }
+}

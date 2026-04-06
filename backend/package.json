@@ -5,29 +5,29 @@
   "type": "module",
   "main": "src/index.js",
   "scripts": {
-    "db:up": "docker compose --env-file .env -f docker-compose.yml up -d",
-    "db:down": "docker compose --env-file .env -f docker-compose.yml down",
+    "db:up": "docker-compose -f docker-compose.yml up -d",
+    "db:down": "docker-compose -f docker-compose.yml down",
     "migrate": "node scripts/run-migrations.js",
     "lint": "eslint .",
     "dev": "npm run migrate && nodemon src/index.js",
     "start": "npm run migrate && node src/index.js"
   },
   "dependencies": {
-    "bcrypt": "^6.0.0",
-    "cookie-parser": "^1.4.7",
-    "cors": "^2.8.6",
-    "dotenv": "^17.3.1",
-    "express": "^5.2.1",
-    "jsonwebtoken": "^9.0.3",
-    "pg": "^8.20.0",
-    "socket.io": "^4.8.3",
-    "zod": "^4.3.6"
+    "bcrypt": "6.0.0",
+    "cookie-parser": "1.4.7",
+    "cors": "2.8.6",
+    "dotenv": "17.3.1",
+    "express": "5.2.1",
+    "jsonwebtoken": "9.0.3",
+    "pg": "8.20.0",
+    "socket.io": "4.8.3",
+    "zod": "4.3.6"
   },
   "devDependencies": {
-    "@eslint/js": "^10.0.1",
-    "eslint": "^10.1.0",
-    "eslint-config-prettier": "^10.1.8",
-    "globals": "^17.4.0",
+    "@eslint/js": "10.0.1",
+    "eslint": "10.1.0",
+    "eslint-config-prettier": "10.1.8",
+    "globals": "17.4.0",
     "nodemon": "3.1.14"
   }
 }
