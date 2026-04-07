@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import authRoutes from "./auth/routes.js";
+import friendshipRoutes from "./friendships/routes.js";
 import pool from "./config/db.js";
 
 dotenv.config();
@@ -22,6 +23,7 @@ app.use(express.json());
 app.use(cookieParser());
 
 app.use(authRoutes);
+app.use(friendshipRoutes);
 
 app.get("/", (req, res) => {
   res.json({ message: "Hello World!" });
