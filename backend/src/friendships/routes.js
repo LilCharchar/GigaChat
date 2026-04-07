@@ -11,5 +11,6 @@ router.get("/friends/requests/incoming", friendshipController.listIncoming);
 router.get("/friends/requests/outgoing", friendshipController.listOutgoing);
 router.patch("/friends/requests/:id", friendshipController.respondRequest);
 router.get("/friends", friendshipController.listFriends);
+router.delete("/friends/:userId", friendshipController.removeFriendship);
 
 export default router;

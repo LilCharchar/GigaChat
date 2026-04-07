@@ -134,7 +134,10 @@
   color: inherit;
   text-align: left;
   cursor: none;
-  transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+  transition:
+    transform 0.18s ease,
+    border-color 0.18s ease,
+    background 0.18s ease;
 }
 
 .dv-room:hover,
@@ -189,8 +192,7 @@
   border-radius: 1.4rem;
   background:
     radial-gradient(circle at 18% 24%, rgba(208, 255, 47, 0.07), transparent 14rem),
-    linear-gradient(90deg, rgba(8, 8, 8, 0.94), rgba(8, 8, 8, 0.72)),
-    rgba(8, 8, 8, 0.84);
+    linear-gradient(90deg, rgba(8, 8, 8, 0.94), rgba(8, 8, 8, 0.72)), rgba(8, 8, 8, 0.84);
   overflow: hidden;
 }
 
@@ -213,8 +215,12 @@
   content: "";
   position: absolute;
   inset: 0;
-  background:
-    linear-gradient(90deg, rgba(8, 8, 8, 0.96) 0%, rgba(8, 8, 8, 0.84) 44%, rgba(8, 8, 8, 0.62) 100%);
+  background: linear-gradient(
+    90deg,
+    rgba(8, 8, 8, 0.96) 0%,
+    rgba(8, 8, 8, 0.84) 44%,
+    rgba(8, 8, 8, 0.62) 100%
+  );
   pointer-events: none;
 }
 
@@ -234,6 +240,144 @@
 .dv-friends {
   padding: 0.95rem;
   border-radius: 1.2rem;
+  max-height: 28rem;
+  overflow: auto;
+}
+
+.dv-social-tabs {
+  margin-top: 0.75rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.4rem;
+}
+
+.dv-social-tab {
+  min-height: 2.2rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0.7rem;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--dv-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 0.66rem;
+  font-weight: 700;
+  cursor: none;
+}
+
+.dv-social-tab.is-active {
+  color: var(--dv-text);
+  border-color: rgba(208, 255, 47, 0.35);
+  background: rgba(208, 255, 47, 0.09);
+}
+
+.dv-social-error,
+.dv-social-empty {
+  margin: 0.6rem 0 0;
+  font-size: 0.78rem;
+  color: var(--dv-muted);
+}
+
+.dv-social-error {
+  color: #ff8f8f;
+}
+
+.dv-social-group {
+  margin-top: 0.85rem;
+}
+
+.dv-social-subhead {
+  margin: 0;
+  font-size: 0.64rem;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--dv-accent);
+}
+
+.dv-friend-form {
+  margin-top: 0.8rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.5rem;
+}
+
+.dv-friend-input {
+  min-height: 2.2rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0.7rem;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--dv-text);
+  padding: 0 0.7rem;
+  outline: none;
+}
+
+.dv-friend-input:focus {
+  border-color: rgba(208, 255, 47, 0.32);
+}
+
+.dv-friend-send {
+  min-height: 2.2rem;
+  border: 0;
+  border-radius: 0.7rem;
+  background: rgba(208, 255, 47, 0.14);
+  color: var(--dv-accent);
+  padding: 0 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: none;
+}
+
+.dv-friend-request p {
+  margin: 0.12rem 0 0;
+  color: var(--dv-muted);
+  font-size: 0.76rem;
+}
+
+.dv-request-actions {
+  display: flex;
+  gap: 0.3rem;
+}
+
+.dv-request-btn {
+  min-height: 1.8rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.6rem;
+  padding: 0 0.5rem;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--dv-text);
+  font-size: 0.64rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  cursor: none;
+}
+
+.dv-request-btn.is-accept {
+  border-color: rgba(208, 255, 47, 0.3);
+  color: var(--dv-accent);
+}
+
+.dv-request-btn.is-reject {
+  border-color: rgba(255, 124, 124, 0.28);
+  color: #ff9f9f;
+}
+
+.dv-request-btn:disabled,
+.dv-friend-send:disabled,
+.dv-social-tab:disabled {
+  opacity: 0.55;
+}
+
+.dv-request-pill {
+  display: inline-grid;
+  place-items: center;
+  min-height: 1.7rem;
+  padding: 0 0.45rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--dv-muted);
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .dv-friend {
@@ -282,8 +426,13 @@
 }
 
 .dv-messages::after {
-  background:
-    linear-gradient(90deg, rgba(7, 7, 7, 0.97) 0%, rgba(7, 7, 7, 0.93) 40%, rgba(7, 7, 7, 0.66) 70%, rgba(7, 7, 7, 0.36) 100%);
+  background: linear-gradient(
+    90deg,
+    rgba(7, 7, 7, 0.97) 0%,
+    rgba(7, 7, 7, 0.93) 40%,
+    rgba(7, 7, 7, 0.66) 70%,
+    rgba(7, 7, 7, 0.36) 100%
+  );
 }
 
 .dv-messages {
@@ -418,6 +567,10 @@
   }
 
   .dv-composer {
+    grid-template-columns: 1fr;
+  }
+
+  .dv-friend-form {
     grid-template-columns: 1fr;
   }
 

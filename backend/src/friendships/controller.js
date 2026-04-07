@@ -1,6 +1,7 @@
 import friendshipService from "./service.js";
 import {
   sendRequestParamsSchema,
+  removeFriendParamsSchema,
   respondRequestParamsSchema,
   respondRequestBodySchema,
 } from "./schemas.js";
@@ -57,10 +58,21 @@ const listFriends = async (req, res) => {
   }
 };
 
+const removeFriendship = async (req, res) => {
+  try {
+    const { userId } = removeFriendParamsSchema.parse(req.params);
+    await friendshipService.removeFriendship(req.auth.id, userId);
+    res.status(204).send();
+  } catch (error) {
+    res.status(getStatusCode(error)).json({ error: error.message });
+  }
+};
+
 export default {
   sendRequest,
   listIncoming,
   listOutgoing,
   respondRequest,
   listFriends,
+  removeFriendship,
 };

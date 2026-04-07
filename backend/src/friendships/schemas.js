@@ -22,3 +22,7 @@ export const respondRequestParamsSchema = z.object({
 export const respondRequestBodySchema = z.object({
   action: z.enum(["accept", "reject"]),
 });
+
+export const removeFriendParamsSchema = z.object({
+  userId: z.uuid(),
+});

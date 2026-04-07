@@ -6,14 +6,27 @@ const {
   activeConversation,
   activeConversationId,
   activeMessages,
-  activeRoster,
   conversations,
   currentUser,
   draft,
+  friendPanelTab,
+  friends,
+  friendshipError,
   handleLogout,
+  incomingFriendRequests,
+  loadingFriendships,
   loadingAuth,
+  outgoingFriendRequests,
+  pendingFriendActionId,
+  removingFriendId,
+  requestUsername,
+  removeFriend,
+  respondToFriendRequest,
   selectConversation,
+  sendFriendRequest,
   sendMessage,
+  sendingFriendRequest,
+  setFriendPanelTab,
 } = useDashboardView();
 </script>
 
@@ -27,11 +40,15 @@ const {
 
       <section class="dv-user">
         <div class="dv-user-mark">
-          {{ (currentUser.username || currentUser.email || "G").slice(0, 1).toUpperCase() }}
+          {{
+            (currentUser.name || currentUser.username || currentUser.email || "G")
+              .slice(0, 1)
+              .toUpperCase()
+          }}
         </div>
         <div>
-          <strong>{{ currentUser.username || "Operador" }}</strong>
-          <p>{{ currentUser.email || "sin-correo" }}</p>
+          <strong>{{ currentUser.name || "Operador" }}</strong>
+          <p>{{ currentUser.username ? `@${currentUser.username}` : "@sin-username" }}</p>
         </div>
       </section>
 
@@ -70,15 +87,129 @@ const {
 
         <aside class="dv-friends">
           <div class="dv-head">
-            <span>Amigos</span>
-            <span>{{ activeRoster.length }}</span>
+            <span>Social</span>
+            <span>{{
+              friendPanelTab === "requests" ? incomingFriendRequests.length : friends.length
+            }}</span>
           </div>
 
-          <article v-for="member in activeRoster" :key="member.name" class="dv-friend">
-            <div class="dv-friend-mark">{{ member.initials }}</div>
-            <strong>{{ member.name }}</strong>
-            <span class="dv-friend-dot" :class="{ 'is-live': member.online }"></span>
-          </article>
+          <div class="dv-social-tabs">
+            <button
+              class="dv-social-tab"
+              :class="{ 'is-active': friendPanelTab === 'requests' }"
+              type="button"
+              @click="setFriendPanelTab('requests')"
+            >
+              Solicitudes
+            </button>
+            <button
+              class="dv-social-tab"
+              :class="{ 'is-active': friendPanelTab === 'friends' }"
+              type="button"
+              @click="setFriendPanelTab('friends')"
+            >
+              Amigos
+            </button>
+          </div>
+
+          <p v-if="friendshipError" class="dv-social-error">{{ friendshipError }}</p>
+
+          <template v-if="friendPanelTab === 'requests'">
+            <form class="dv-friend-form" @submit.prevent="sendFriendRequest">
+              <input
+                v-model="requestUsername"
+                class="dv-friend-input"
+                type="text"
+                placeholder="username"
+                autocomplete="off"
+              />
+              <button class="dv-friend-send" :disabled="sendingFriendRequest" type="submit">
+                {{ sendingFriendRequest ? "Enviando" : "Enviar" }}
+              </button>
+            </form>
+
+            <div class="dv-social-group">
+              <p class="dv-social-subhead">Entrantes</p>
+              <article
+                v-for="request in incomingFriendRequests"
+                :key="request.id"
+                class="dv-friend dv-friend-request"
+              >
+                <div class="dv-friend-mark">{{ request.initials }}</div>
+                <div>
+                  <strong>{{ request.name }}</strong>
+                  <p>@{{ request.username }}</p>
+                </div>
+                <div class="dv-request-actions">
+                  <button
+                    class="dv-request-btn is-accept"
+                    :disabled="pendingFriendActionId === request.id"
+                    type="button"
+                    @click="respondToFriendRequest(request.id, 'accept')"
+                  >
+                    Aceptar
+                  </button>
+                  <button
+                    class="dv-request-btn is-reject"
+                    :disabled="pendingFriendActionId === request.id"
+                    type="button"
+                    @click="respondToFriendRequest(request.id, 'reject')"
+                  >
+                    Rechazar
+                  </button>
+                </div>
+              </article>
+              <p
+                v-if="!incomingFriendRequests.length && !loadingFriendships"
+                class="dv-social-empty"
+              >
+                No tienes solicitudes pendientes.
+              </p>
+            </div>
+
+            <div class="dv-social-group">
+              <p class="dv-social-subhead">Enviadas</p>
+              <article
+                v-for="request in outgoingFriendRequests"
+                :key="request.id"
+                class="dv-friend dv-friend-request"
+              >
+                <div class="dv-friend-mark">{{ request.initials }}</div>
+                <div>
+                  <strong>{{ request.name }}</strong>
+                  <p>@{{ request.username }}</p>
+                </div>
+                <span class="dv-request-pill">Pendiente</span>
+              </article>
+              <p
+                v-if="!outgoingFriendRequests.length && !loadingFriendships"
+                class="dv-social-empty"
+              >
+                No tienes solicitudes enviadas.
+              </p>
+            </div>
+          </template>
+
+          <template v-else>
+            <article v-for="friend in friends" :key="friend.user_id" class="dv-friend">
+              <div class="dv-friend-mark">{{ friend.initials }}</div>
+              <div>
+                <strong>{{ friend.name }}</strong>
+                <p>@{{ friend.username }}</p>
+              </div>
+              <button
+                class="dv-request-btn is-reject"
+                :disabled="removingFriendId === friend.user_id"
+                type="button"
+                @click="removeFriend(friend.user_id)"
+              >
+                {{ removingFriendId === friend.user_id ? "Quitando" : "Eliminar" }}
+              </button>
+            </article>
+            <p v-if="!friends.length && !loadingFriendships" class="dv-social-empty">
+              Aun no tienes amigos agregados.
+            </p>
+          </template>
         </aside>
       </header>
 

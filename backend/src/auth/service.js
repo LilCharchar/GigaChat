@@ -43,7 +43,7 @@ const login = async (data) => {
   const { email, password } = data;
 
   const result = await pool.query(
-    `SELECT id, username, email, password_hash FROM users WHERE email = $1`,
+    `SELECT id, name, username, email, password_hash FROM users WHERE email = $1`,
     [email]
   );
 
@@ -65,6 +65,7 @@ const login = async (data) => {
   return {
     user: {
       id: user.id,
+      name: user.name,
       username: user.username,
       email: user.email,
     },
@@ -73,7 +74,9 @@ const login = async (data) => {
 };
 
 const getCurrentUser = async (id) => {
-  const result = await pool.query("SELECT id, username, email FROM users WHERE id = $1", [id]);
+  const result = await pool.query("SELECT id, name, username, email FROM users WHERE id = $1", [
+    id,
+  ]);
 
   if (result.rows.length === 0) {
     throw new Error("User not found");

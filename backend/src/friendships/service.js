@@ -194,10 +194,30 @@ const listFriends = async (currentUserId) => {
   return result.rows;
 };
 
+const removeFriendship = async (currentUserId, targetUserId) => {
+  if (currentUserId === targetUserId) {
+    throw createHttpError("You cannot remove yourself", 400);
+  }
+
+  const deleted = await pool.query(
+    `DELETE FROM friendships
+     WHERE status = 'accepted'
+       AND LEAST(requester_id, addressee_id) = LEAST($1::uuid, $2::uuid)
+       AND GREATEST(requester_id, addressee_id) = GREATEST($1::uuid, $2::uuid)
+     RETURNING id`,
+    [currentUserId, targetUserId]
+  );
+
+  if (deleted.rows.length === 0) {
+    throw createHttpError("Friendship not found", 404);
+  }
+};
+
 export default {
   sendRequest,
   listIncoming,
   listOutgoing,
   respondRequest,
   listFriends,
+  removeFriendship,
 };
