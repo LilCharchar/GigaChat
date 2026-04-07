@@ -1,9 +1,7 @@
 @import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Archivo+Black&display=swap");
 
 body {
-  background:
-    radial-gradient(circle at top, rgba(208, 255, 0, 0.15), transparent 30%),
-    #070707;
+  background: radial-gradient(circle at top, rgba(208, 255, 0, 0.15), transparent 30%), #070707;
 }
 
 .lv-page {
@@ -90,7 +88,9 @@ body {
   object-position: center 14%;
   filter: grayscale(1) contrast(1.06) brightness(0.68);
   transform: scale(1.01);
-  transition: transform 1.4s ease, filter 1.4s ease;
+  transition:
+    transform 1.4s ease,
+    filter 1.4s ease;
 }
 
 .lv-page.is-visible .lv-hero-media {
@@ -123,7 +123,9 @@ body {
   max-width: 19rem;
   transform: translateY(32px);
   opacity: 0;
-  transition: transform 0.8s ease 0.2s, opacity 0.8s ease 0.2s;
+  transition:
+    transform 0.8s ease 0.2s,
+    opacity 0.8s ease 0.2s;
 }
 
 .lv-page.is-visible .lv-hero-content,
@@ -212,7 +214,9 @@ body {
     inset 0 1px 0 rgba(255, 255, 255, 0.04);
   transform: translateY(32px);
   opacity: 0;
-  transition: transform 0.8s ease 0.3s, opacity 0.8s ease 0.3s;
+  transition:
+    transform 0.8s ease 0.3s,
+    opacity 0.8s ease 0.3s;
   overflow: hidden;
 }
 
@@ -371,7 +375,10 @@ body {
     linear-gradient(180deg, rgba(255, 255, 255, 0.028), rgba(255, 255, 255, 0.015)),
     rgba(255, 255, 255, 0.028);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease;
 }
 
 .lv-input-shell:focus-within {
@@ -415,7 +422,9 @@ body {
   background: transparent;
   color: var(--lv-accent);
   font-weight: 700;
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
 }
 
 .lv-toggle:hover {
@@ -447,7 +456,10 @@ body {
   box-shadow:
     0 12px 30px rgba(197, 255, 0, 0.18),
     inset 0 1px 0 rgba(255, 255, 255, 0.35);
-  transition: transform 0.15s ease, box-shadow 0.25s ease, filter 0.25s ease;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.25s ease,
+    filter 0.25s ease;
 }
 
 .lv-submit::after {
@@ -488,6 +500,28 @@ body {
   font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.12em;
+}
+
+.lv-switch {
+  margin-top: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  color: rgba(255, 255, 255, 0.66);
+  font-size: 0.78rem;
+}
+
+.lv-switch a {
+  color: var(--lv-accent);
+  font-weight: 700;
+  text-decoration: none;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.lv-switch a:hover {
+  opacity: 0.82;
 }
 
 .lv-error-enter-active,

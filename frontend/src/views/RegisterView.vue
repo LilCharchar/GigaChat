@@ -1,7 +1,7 @@
 <script setup>
 import gigachadHero from "../assets/gigachad-login-12s.mp4";
 import "../assets/css/login-view.css";
-import { useLoginView } from "../composables/useLoginView";
+import { useRegisterView } from "../composables/useRegisterView";
 
 const {
   audioAvailable,
@@ -16,15 +16,19 @@ const {
   heroVideoRef,
   isAudioMuted,
   isEmailValid,
+  isNameValid,
   isPasswordValid,
+  isUsernameValid,
   loadingAuth,
   mounted,
+  name,
   password,
   shake,
   showPassword,
   submitted,
   toggleAudio,
-} = useLoginView();
+  username,
+} = useRegisterView();
 </script>
 
 <template>
@@ -61,8 +65,8 @@ const {
           <span class="lv-brand-kicker">GIGACHAT</span>
         </div>
 
-        <p class="lv-overline">Login for chads only</p>
-        <p class="lv-copy">Rapido. Directo. Sin interfaz tibia.</p>
+        <p class="lv-overline">Registro de operadores</p>
+        <p class="lv-copy">Crea tu perfil y entra directo al canal.</p>
       </div>
     </section>
 
@@ -72,10 +76,10 @@ const {
       <div class="lv-panel-inner" :class="{ 'is-shaking': shake }">
         <header class="lv-header">
           <div class="lv-meme-badges">
-            <p class="lv-panel-kicker">Acceso privado</p>
+            <p class="lv-panel-kicker">Nueva cuenta</p>
           </div>
 
-          <h2 class="lv-title">Entrar al CHAD</h2>
+          <h2 class="lv-title">Registrarse</h2>
 
           <div class="lv-powerline" aria-hidden="true">
             <span class="lv-powerline-label">power</span>
@@ -96,22 +100,62 @@ const {
         </Transition>
 
         <form class="lv-form" novalidate @submit.prevent="handleSubmit">
-          <div class="lv-field" :class="{ 'has-error': submitted && !isEmailValid }">
-            <label class="lv-label" for="lv-email">Correo</label>
-
+          <div class="lv-field" :class="{ 'has-error': submitted && !isNameValid }">
+            <label class="lv-label" for="rv-name">Nombre de pantalla</label>
             <div class="lv-input-shell">
               <input
-                id="lv-email"
-                v-model="email"
+                id="rv-name"
+                v-model="name"
                 class="lv-input"
-                type="email"
-                placeholder="tu@correo.com"
+                type="text"
+                placeholder="Tu nombre"
+                autocomplete="name"
+                :disabled="loadingAuth"
+                @input="clearError"
+              />
+            </div>
+            <Transition name="lv-feedback">
+              <p v-if="submitted && !isNameValid" class="lv-feedback">
+                El nombre es obligatorio (maximo 100 caracteres).
+              </p>
+            </Transition>
+          </div>
+
+          <div class="lv-field" :class="{ 'has-error': submitted && !isUsernameValid }">
+            <label class="lv-label" for="rv-username">Username</label>
+            <div class="lv-input-shell">
+              <input
+                id="rv-username"
+                v-model="username"
+                class="lv-input"
+                type="text"
+                placeholder="tu_username"
                 autocomplete="username"
                 :disabled="loadingAuth"
                 @input="clearError"
               />
             </div>
+            <Transition name="lv-feedback">
+              <p v-if="submitted && !isUsernameValid" class="lv-feedback">
+                Usa 3-30 caracteres: a-z, 0-9, _ o .
+              </p>
+            </Transition>
+          </div>
 
+          <div class="lv-field" :class="{ 'has-error': submitted && !isEmailValid }">
+            <label class="lv-label" for="rv-email">Correo</label>
+            <div class="lv-input-shell">
+              <input
+                id="rv-email"
+                v-model="email"
+                class="lv-input"
+                type="email"
+                placeholder="tu@correo.com"
+                autocomplete="email"
+                :disabled="loadingAuth"
+                @input="clearError"
+              />
+            </div>
             <Transition name="lv-feedback">
               <p v-if="submitted && !email.trim()" class="lv-feedback">El correo es obligatorio.</p>
               <p v-else-if="submitted && !isEmailValid" class="lv-feedback">
@@ -121,16 +165,15 @@ const {
           </div>
 
           <div class="lv-field" :class="{ 'has-error': submitted && !isPasswordValid }">
-            <label class="lv-label" for="lv-password">Contrasena</label>
-
+            <label class="lv-label" for="rv-password">Contrasena</label>
             <div class="lv-input-shell lv-input-shell--password">
               <input
-                id="lv-password"
+                id="rv-password"
                 v-model="password"
                 class="lv-input"
                 :type="showPassword ? 'text' : 'password'"
-                placeholder="Minimo 6 caracteres"
-                autocomplete="current-password"
+                placeholder="Minimo 8 caracteres"
+                autocomplete="new-password"
                 :disabled="loadingAuth"
                 @input="clearError"
               />
@@ -148,20 +191,20 @@ const {
             <Transition name="lv-feedback">
               <p v-if="submitted && !password" class="lv-feedback">La contrasena es obligatoria.</p>
               <p v-else-if="submitted && !isPasswordValid" class="lv-feedback">
-                Minimo 6 caracteres.
+                Minimo 8 caracteres.
               </p>
             </Transition>
           </div>
 
           <button class="lv-submit" type="submit" :disabled="loadingAuth">
             <span v-if="loadingAuth" class="lv-spinner" aria-hidden="true"></span>
-            <span>{{ loadingAuth ? "Cargando..." : "Entrar" }}</span>
+            <span>{{ loadingAuth ? "Creando..." : "Crear cuenta" }}</span>
           </button>
         </form>
 
         <div class="lv-switch">
-          <span>No tienes cuenta?</span>
-          <RouterLink to="/register">Registrate</RouterLink>
+          <span>Ya tienes cuenta?</span>
+          <RouterLink to="/login">Inicia sesion</RouterLink>
         </div>
 
         <div class="lv-footer-copy">

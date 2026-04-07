@@ -71,6 +71,33 @@ export const useAuthStore = defineStore("auth", {
       }
     },
 
+    async register(payload) {
+      this.loadingAuth = true;
+      this.error = "";
+
+      try {
+        await authService.register(payload);
+        const loginResponse = await authService.login({
+          email: payload.email,
+          password: payload.password,
+        });
+
+        const loggedUser = loginResponse?.data?.user;
+        if (!loggedUser) {
+          throw new Error("No se recibio el usuario autenticado.");
+        }
+
+        this.user = loggedUser;
+        this.sessionChecked = true;
+        return true;
+      } catch (err) {
+        this.error = mapError(err);
+        return false;
+      } finally {
+        this.loadingAuth = false;
+      }
+    },
+
     async logout() {
       this.loadingAuth = true;
       this.error = "";

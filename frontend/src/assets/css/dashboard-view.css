@@ -99,6 +99,22 @@
   display: block;
 }
 
+.dv-user > div:last-child,
+.dv-friend > div,
+.dv-room strong {
+  min-width: 0;
+}
+
+.dv-user strong,
+.dv-user p,
+.dv-friend strong,
+.dv-friend p,
+.dv-room strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .dv-user p {
   margin: 0.15rem 0 0;
   color: var(--dv-muted);
