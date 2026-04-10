@@ -12,8 +12,10 @@ const {
   friendPanelTab,
   friends,
   friendshipError,
+  chatError,
   handleLogout,
   incomingFriendRequests,
+  loadingChat,
   loadingFriendships,
   loadingAuth,
   outgoingFriendRequests,
@@ -22,6 +24,7 @@ const {
   requestUsername,
   removeFriend,
   respondToFriendRequest,
+  socketConnected,
   selectConversation,
   sendFriendRequest,
   sendMessage,
@@ -58,6 +61,9 @@ const {
           <span>{{ conversations.length }}</span>
         </div>
 
+        <p v-if="loadingChat" class="dv-social-empty">Cargando chat global...</p>
+        <p v-else-if="chatError" class="dv-social-error">{{ chatError }}</p>
+
         <button
           v-for="conversation in conversations"
           :key="conversation.id"
@@ -81,7 +87,10 @@ const {
         <div class="dv-hero">
           <div class="dv-hero-copy">
             <p class="dv-eyebrow">Chat</p>
-            <h2>{{ activeConversation.name }}</h2>
+            <h2>{{ activeConversation?.name || "Global" }}</h2>
+            <p class="dv-social-empty">
+              Socket: {{ socketConnected ? "conectado" : "desconectado" }}
+            </p>
           </div>
         </div>
 
@@ -215,6 +224,9 @@ const {
 
       <section class="dv-chat">
         <div class="dv-messages">
+          <p v-if="!activeMessages.length" class="dv-social-empty">
+            Aun no hay mensajes en este chat.
+          </p>
           <article
             v-for="message in activeMessages"
             :key="message.id"
@@ -235,6 +247,7 @@ const {
             class="dv-input"
             rows="1"
             placeholder="Escribe un mensaje"
+            @keydown.enter.exact.prevent="sendMessage"
           ></textarea>
           <button class="dv-send" type="submit">Enviar</button>
         </form>

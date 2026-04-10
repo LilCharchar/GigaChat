@@ -3,137 +3,35 @@ import { storeToRefs } from "pinia";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "../stores/auth";
 import { friendshipService } from "../services/friendshipService";
-
-const conversationSeed = [
-  {
-    id: "war-room",
-    name: "War Room",
-    topic: "Operaciones generales, mensajes rapidos y decisiones claras.",
-    status: "En linea",
-    mode: "jawline protocol",
-    members: 12,
-    unread: 3,
-    updatedAt: "Hace 2 min",
-    signalBars: ["0.5rem", "0.9rem", "1.3rem", "1.7rem", "1.2rem"],
-    pinnedTitle: "Brief del turno",
-    pinnedNote:
-      "Mantener latencia baja, respuestas cortas y canal limpio para cuando entre backend realtime.",
-    metrics: [
-      { label: "Mensajes hoy", value: "184" },
-      { label: "Tiempo medio", value: "1.3s" },
-      { label: "Saturacion", value: "18%" },
-    ],
-    roster: [
-      { name: "SigmaOps", role: "Squad lead", online: true },
-      { name: "GigaBot", role: "System relay", online: true },
-      { name: "Volt", role: "Moderator", online: false },
-    ],
-    messages: [
-      {
-        id: "m1",
-        author: "SigmaOps",
-        role: "squad lead",
-        text: "Canal abierto. Usen esto para coordinar, no para adornar.",
-        time: "08:14",
-        own: false,
-      },
-      {
-        id: "m2",
-        author: "GigaBot",
-        role: "system",
-        text: "Socket mock conectado. La interfaz esta lista para reemplazar seed por payload real.",
-        time: "08:16",
-        own: false,
-      },
-      {
-        id: "m3",
-        author: "Tu",
-        role: "operator",
-        text: "Recibido. Revisando actividad y preparando el canal para consumo real.",
-        time: "08:18",
-        own: true,
-      },
-    ],
-  },
-  {
-    id: "meme-lab",
-    name: "Meme Lab",
-    topic: "Iteracion visual, copy corto y assets que no se sientan plantilla.",
-    status: "Activo",
-    mode: "poster drop",
-    members: 8,
-    unread: 5,
-    updatedAt: "Hace 11 min",
-    signalBars: ["0.45rem", "0.75rem", "1rem", "1.25rem", "0.85rem"],
-    pinnedTitle: "Direccion visual",
-    pinnedNote:
-      "Nada de dashboard corporativo. Prioridad en contraste, ritmo y una sola idea fuerte por seccion.",
-    metrics: [
-      { label: "Conceptos", value: "09" },
-      { label: "Assets", value: "27" },
-      { label: "Aprobacion", value: "94%" },
-    ],
-    roster: [
-      { name: "FrameCut", role: "Visual editor", online: true },
-      { name: "LoreDrop", role: "Copy", online: true },
-      { name: "Tu", role: "Operator", online: true },
-    ],
-    messages: [
-      {
-        id: "m4",
-        author: "FrameCut",
-        role: "visual editor",
-        text: "El hero del dashboard tiene que sentirse mas poster y menos panel administrativo.",
-        time: "09:03",
-        own: false,
-      },
-      {
-        id: "m5",
-        author: "Tu",
-        role: "operator",
-        text: "Voy con una cabecera atmosferica, thread dominante y panel lateral mas util.",
-        time: "09:05",
-        own: true,
-      },
-    ],
-  },
-  {
-    id: "night-shift",
-    name: "Night Shift",
-    topic: "Logs, soporte y seguimiento cuando baja el trafico.",
-    status: "Standby",
-    mode: "silent watch",
-    members: 6,
-    unread: 0,
-    updatedAt: "Ayer",
-    signalBars: ["0.3rem", "0.45rem", "0.65rem", "0.9rem", "0.55rem"],
-    pinnedTitle: "Ultimo cierre",
-    pinnedNote:
-      "Canal de guardia. Si se conecta backend realtime, este es el primero para alertas y eventos de sistema.",
-    metrics: [
-      { label: "Incidentes", value: "02" },
-      { label: "Respuesta", value: "3.8s" },
-      { label: "Ruido", value: "Bajo" },
-    ],
-    roster: [
-      { name: "Volt", role: "Moderator", online: false },
-      { name: "Nox", role: "Support", online: false },
-      { name: "Relay", role: "Bot", online: true },
-    ],
-    messages: [
-      {
-        id: "m6",
-        author: "Volt",
-        role: "moderator",
-        text: "Todo limpio por ahora. Solo seguimiento de eventos y cierre suave.",
-        time: "23:41",
-        own: false,
-      },
-    ],
-  },
-];
+import { chatService } from "../services/chatService";
+import { chatSocketService } from "../services/chatSocketService";
 
 const FRIENDSHIPS_REFRESH_MS = 8000;
+
+const EMPTY_METRICS = [
+  { label: "Mensajes", value: "0" },
+  { label: "Latencia", value: "-" },
+  { label: "Estado", value: "Activo" },
+];
+
+function createDefaultConversation(chat) {
+  return {
+    id: chat.id,
+    name: chat.title || "Global",
+    topic: "Chat global de la comunidad.",
+    status: "En linea",
+    mode: "global relay",
+    members: 0,
+    unread: 0,
+    updatedAt: "Ahora",
+    signalBars: ["0.5rem", "0.9rem", "1.3rem", "1.7rem", "1.2rem"],
+    pinnedTitle: "Canal Global",
+    pinnedNote: "Usa este canal para probar flujo realtime end-to-end.",
+    metrics: structuredClone(EMPTY_METRICS),
+    roster: [],
+    messages: [],
+  };
+}
 
 function nowLabel() {
   return new Intl.DateTimeFormat("es-CO", {
@@ -141,6 +39,23 @@ function nowLabel() {
     minute: "2-digit",
     hour12: false,
   }).format(new Date());
+}
+
+function timeLabelFromDate(value) {
+  if (!value) {
+    return nowLabel();
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return nowLabel();
+  }
+
+  return new Intl.DateTimeFormat("es-CO", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(date);
 }
 
 function getInitials(name = "") {
@@ -162,8 +77,8 @@ export function useDashboardView() {
   const authStore = useAuthStore();
   const { user, loadingAuth } = storeToRefs(authStore);
 
-  const conversations = ref(structuredClone(conversationSeed));
-  const activeConversationId = ref(conversations.value[0]?.id ?? "");
+  const conversations = ref([]);
+  const activeConversationId = ref("");
   const draft = ref("");
   const friendPanelTab = ref("requests");
   const incomingFriendRequests = ref([]);
@@ -176,14 +91,20 @@ export function useDashboardView() {
   const removingFriendId = ref("");
   const friendshipError = ref("");
   const friendshipsSyncing = ref(false);
+  const loadingChat = ref(false);
+  const chatError = ref("");
+  const socketConnected = ref(false);
   let friendshipsRefreshTimer = null;
+  let socketUnsubscribeMessageNew = null;
+  let socketUnsubscribeConnect = null;
+  let socketUnsubscribeDisconnect = null;
 
   const currentUser = computed(() => user.value ?? {});
 
   const activeConversation = computed(
     () =>
       conversations.value.find((conversation) => conversation.id === activeConversationId.value) ??
-      conversations.value[0]
+      null
   );
 
   const activeMessages = computed(() =>
@@ -215,14 +136,147 @@ export function useDashboardView() {
     conversations.value.reduce((sum, conversation) => sum + conversation.unread, 0)
   );
 
-  const onlineContacts = computed(
-    () => conversations.value.filter((conversation) => conversation.status !== "Standby").length
-  );
+  const onlineContacts = computed(() => conversations.value.length);
 
   const messageCount = computed(() => activeConversation.value?.messages?.length ?? 0);
 
   function selectConversation(conversationId) {
     activeConversationId.value = conversationId;
+  }
+
+  function formatServerMessage(message) {
+    const isOwn = message.senderId === currentUser.value.id;
+    const displayName = message.senderName || message.senderUsername || "Usuario";
+    return {
+      id: message.id,
+      author: isOwn ? "Tu" : displayName,
+      role: isOwn ? "operator" : "member",
+      text: message.body,
+      time: timeLabelFromDate(message.createdAt),
+      own: isOwn,
+      senderId: message.senderId,
+      senderName: message.senderName || null,
+      senderUsername: message.senderUsername || null,
+      createdAt: message.createdAt,
+      clientMessageId: message.clientMessageId || null,
+    };
+  }
+
+  function pushOrUpdateMessage(conversation, incoming) {
+    if (!conversation) {
+      return;
+    }
+
+    const existingById = conversation.messages.find((message) => message.id === incoming.id);
+    if (existingById) {
+      existingById.text = incoming.text;
+      existingById.time = incoming.time;
+      return;
+    }
+
+    if (incoming.clientMessageId) {
+      const existingByClientId = conversation.messages.find(
+        (message) => message.clientMessageId && message.clientMessageId === incoming.clientMessageId
+      );
+      if (existingByClientId) {
+        existingByClientId.id = incoming.id;
+        existingByClientId.text = incoming.text;
+        existingByClientId.time = incoming.time;
+        existingByClientId.createdAt = incoming.createdAt;
+        return;
+      }
+    }
+
+    conversation.messages.push(incoming);
+  }
+
+  async function loadGlobalChat() {
+    loadingChat.value = true;
+    chatError.value = "";
+
+    try {
+      const chatResponse = await chatService.getGlobalChat();
+      const chat = chatResponse?.data?.chat;
+
+      if (!chat?.id) {
+        throw new Error("No se encontro chat global");
+      }
+
+      const conversation = createDefaultConversation(chat);
+      const messagesResponse = await chatService.getMessages(chat.id, 50);
+      const serverMessages = messagesResponse?.data?.messages ?? [];
+
+      conversation.messages = serverMessages.map((message) =>
+        formatServerMessage({
+          id: message.id,
+          senderId: message.sender_id,
+          senderName: message.sender_name,
+          senderUsername: message.sender_username,
+          body: message.body,
+          createdAt: message.created_at,
+          clientMessageId: message.client_message_id,
+        })
+      );
+
+      conversation.metrics[0].value = String(conversation.messages.length);
+      conversations.value = [conversation];
+      activeConversationId.value = conversation.id;
+    } catch (error) {
+      chatError.value =
+        error?.response?.data?.error || error.message || "No fue posible cargar el chat.";
+      conversations.value = [];
+      activeConversationId.value = "";
+    } finally {
+      loadingChat.value = false;
+    }
+  }
+
+  async function subscribeActiveConversation() {
+    if (!activeConversation.value?.id) {
+      return;
+    }
+
+    await chatSocketService.subscribeChat(activeConversation.value.id);
+  }
+
+  function setupSocketListeners() {
+    socketUnsubscribeConnect = chatSocketService.on("connect", () => {
+      socketConnected.value = true;
+      subscribeActiveConversation().catch(() => {});
+    });
+
+    socketUnsubscribeDisconnect = chatSocketService.on("disconnect", () => {
+      socketConnected.value = false;
+    });
+
+    socketUnsubscribeMessageNew = chatSocketService.on("message:new", (message) => {
+      const conversation = conversations.value.find((chat) => chat.id === message.chatId);
+      if (!conversation) {
+        return;
+      }
+
+      const normalized = formatServerMessage(message);
+      pushOrUpdateMessage(conversation, normalized);
+      conversation.updatedAt = "Ahora";
+      conversation.metrics[0].value = String(conversation.messages.length);
+    });
+  }
+
+  function cleanupSocketListeners() {
+    if (socketUnsubscribeMessageNew) {
+      socketUnsubscribeMessageNew();
+      socketUnsubscribeMessageNew = null;
+    }
+
+    if (socketUnsubscribeConnect) {
+      socketUnsubscribeConnect();
+      socketUnsubscribeConnect = null;
+    }
+
+    if (socketUnsubscribeDisconnect) {
+      socketUnsubscribeDisconnect();
+      socketUnsubscribeDisconnect = null;
+    }
   }
 
   function normalizeIncomingRequests(payload = []) {
@@ -357,21 +411,37 @@ export function useDashboardView() {
     friendPanelTab.value = tab;
   }
 
-  function sendMessage() {
+  async function sendMessage() {
     const message = draft.value.trim();
     if (!message || !activeConversation.value) return;
 
-    activeConversation.value.messages.push({
-      id: `m-${Date.now()}`,
-      author: currentUser.value.username ?? "Tu",
+    const clientMessageId = crypto.randomUUID();
+    const optimisticMessage = {
+      id: `tmp-${clientMessageId}`,
+      author: "Tu",
       role: "operator",
       text: message,
       time: nowLabel(),
       own: true,
-    });
+      senderId: currentUser.value.id,
+      createdAt: new Date().toISOString(),
+      clientMessageId,
+    };
 
+    pushOrUpdateMessage(activeConversation.value, optimisticMessage);
     activeConversation.value.updatedAt = "Ahora";
+    activeConversation.value.metrics[0].value = String(activeConversation.value.messages.length);
     draft.value = "";
+
+    try {
+      await chatSocketService.sendMessage({
+        chatId: activeConversation.value.id,
+        body: message,
+        clientMessageId,
+      });
+    } catch (error) {
+      chatError.value = error.message || "No fue posible enviar el mensaje.";
+    }
   }
 
   async function handleLogout() {
@@ -382,7 +452,13 @@ export function useDashboardView() {
     }
   }
 
-  onMounted(() => {
+  onMounted(async () => {
+    await loadGlobalChat();
+    chatSocketService.connect();
+    setupSocketListeners();
+    await subscribeActiveConversation().catch((error) => {
+      chatError.value = error.message || "No fue posible suscribirse al chat.";
+    });
     loadFriendships();
     startFriendshipsRefreshLoop();
     window.addEventListener("focus", refreshFriendshipsInBackground);
@@ -390,6 +466,11 @@ export function useDashboardView() {
   });
 
   onBeforeUnmount(() => {
+    cleanupSocketListeners();
+    if (activeConversation.value?.id) {
+      chatSocketService.unsubscribeChat(activeConversation.value.id).catch(() => {});
+    }
+    chatSocketService.disconnect();
     stopFriendshipsRefreshLoop();
     window.removeEventListener("focus", refreshFriendshipsInBackground);
     document.removeEventListener("visibilitychange", refreshFriendshipsInBackground);
@@ -409,6 +490,9 @@ export function useDashboardView() {
     friendPanelTab,
     friends,
     friendshipError,
+    chatError,
+    loadingChat,
+    socketConnected,
     handleLogout,
     incomingFriendRequests,
     loadingFriendships,
