@@ -5,6 +5,7 @@ import {
   ensureUserIsActive,
   getMessageById,
   isActiveMember,
+  isActiveParticipant,
   softDeleteMessage,
   updateMessageBody,
 } from "./service.js";
@@ -74,9 +75,9 @@ export function registerChatSocketHandlers(io, socket) {
         throw createHttpError("chatId is required", 400);
       }
 
-      const member = await isActiveMember(socket.user.id, chatId);
+      const participant = await isActiveParticipant(socket.user.id, chatId);
 
-      if (!member) {
+      if (!participant) {
         throw createHttpError("Forbidden", 403);
       }
 
@@ -117,9 +118,9 @@ export function registerChatSocketHandlers(io, socket) {
         throw createHttpError("chatId is required", 400);
       }
 
-      const member = await isActiveMember(socket.user.id, chatId);
+      const participant = await isActiveParticipant(socket.user.id, chatId);
 
-      if (!member) {
+      if (!participant) {
         throw createHttpError("Forbidden", 403);
       }
 
