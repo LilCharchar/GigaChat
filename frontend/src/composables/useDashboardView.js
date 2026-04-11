@@ -130,6 +130,7 @@ export function useDashboardView() {
   const activeConversation = computed(
     () =>
       conversations.value.find((conversation) => conversation.id === activeConversationId.value) ??
+      dms.value.find((dm) => dm.id === activeConversationId.value) ??
       null
   );
 
@@ -376,7 +377,8 @@ export function useDashboardView() {
     });
 
     socketUnsubscribeMessageNew = chatSocketService.on("message:new", (message) => {
-      const conversation = conversations.value.find((chat) => chat.id === message.chatId);
+      const conversation = conversations.value.find((chat) => chat.id === message.chatId) ||
+                          dms.value.find((dm) => dm.id === message.chatId);
       if (!conversation) {
         return;
       }
