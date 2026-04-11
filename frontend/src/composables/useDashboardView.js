@@ -119,6 +119,7 @@ export function useDashboardView() {
   const socketConnected = ref(false);
   const loadingDMs = ref(false);
   const dms = ref([]);
+
   let friendshipsRefreshTimer = null;
   let socketUnsubscribeMessageNew = null;
   let socketUnsubscribeConnect = null;
