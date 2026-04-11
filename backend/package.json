@@ -5,8 +5,8 @@
   "type": "module",
   "main": "src/index.js",
   "scripts": {
-    "db:up": "docker-compose -f docker-compose.yml up -d",
-    "db:down": "docker-compose -f docker-compose.yml down",
+    "db:up": "docker compose -f docker-compose.yml up -d",
+    "db:down": "docker compose -f docker-compose.yml down",
     "migrate": "node scripts/run-migrations.js",
     "lint": "eslint .",
     "dev": "npm run migrate && nodemon src/index.js",
