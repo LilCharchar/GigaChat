@@ -4,6 +4,20 @@ import jwt from "jsonwebtoken";
 
 const ACCESS_TOKEN_EXPIRES_IN = "1h";
 
+function mapUser(row) {
+  return {
+    id: row.id,
+    name: row.name,
+    username: row.username,
+    email: row.email,
+    bio: row.bio,
+    avatarUrl: row.avatar_url,
+    avatarDriveFileId: row.avatar_drive_file_id,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
 export function getJwtSecret() {
   if (!process.env.JWT_SECRET) {
     throw new Error("Missing JWT_SECRET");
@@ -21,10 +35,10 @@ const register = async (data) => {
     const result = await pool.query(
       `INSERT INTO users (name, username, email, password_hash) 
        VALUES ($1, $2, $3, $4) 
-       RETURNING id, name, username, email, created_at`,
+       RETURNING id, name, username, email, bio, avatar_url, avatar_drive_file_id, created_at, updated_at`,
       [name, username, email, passwordHash]
     );
-    return result.rows[0];
+    return mapUser(result.rows[0]);
   } catch (error) {
     if (error.code === "23505") {
       const detail = error.detail || "";
@@ -43,7 +57,9 @@ const login = async (data) => {
   const { email, password } = data;
 
   const result = await pool.query(
-    `SELECT id, name, username, email, password_hash FROM users WHERE email = $1`,
+    `SELECT id, name, username, email, bio, avatar_url, avatar_drive_file_id, password_hash, created_at, updated_at
+     FROM users
+     WHERE email = $1`,
     [email]
   );
 
@@ -63,26 +79,68 @@ const login = async (data) => {
   });
 
   return {
-    user: {
-      id: user.id,
-      name: user.name,
-      username: user.username,
-      email: user.email,
-    },
+    user: mapUser(user),
     token,
   };
 };
 
 const getCurrentUser = async (id) => {
-  const result = await pool.query("SELECT id, name, username, email FROM users WHERE id = $1", [
-    id,
-  ]);
+  const result = await pool.query(
+    `SELECT id, name, username, email, bio, avatar_url, avatar_drive_file_id, created_at, updated_at
+     FROM users
+     WHERE id = $1`,
+    [id]
+  );
 
   if (result.rows.length === 0) {
     throw new Error("User not found");
   }
 
-  return result.rows[0];
+  return mapUser(result.rows[0]);
 };
 
-export default { register, login, getCurrentUser };
+const updateProfile = async (id, data) => {
+  const allowedFields = {
+    name: "name",
+    username: "username",
+    bio: "bio",
+    avatarUrl: "avatar_url",
+    avatarDriveFileId: "avatar_drive_file_id",
+  };
+
+  const entries = Object.entries(data).filter(([key]) => key in allowedFields);
+
+  if (entries.length === 0) {
+    throw new Error("No fields to update");
+  }
+
+  const assignments = entries.map(([key], index) => `${allowedFields[key]} = $${index + 2}`);
+  const values = entries.map(([, value]) => value);
+
+  try {
+    const result = await pool.query(
+      `UPDATE users
+       SET ${assignments.join(", ")}
+       WHERE id = $1
+       RETURNING id, name, username, email, bio, avatar_url, avatar_drive_file_id, created_at, updated_at`,
+      [id, ...values]
+    );
+
+    if (result.rows.length === 0) {
+      throw new Error("User not found");
+    }
+
+    return mapUser(result.rows[0]);
+  } catch (error) {
+    if (error.code === "23505") {
+      const detail = error.detail || "";
+      if (detail.includes("username")) {
+        throw new Error("El username ya está en uso", { cause: error });
+      }
+    }
+
+    throw error;
+  }
+};
+
+export default { register, login, getCurrentUser, updateProfile };

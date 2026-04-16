@@ -1,5 +1,15 @@
 import { z } from "zod";
 
+const ALLOWED_USERNAME_CHARS = new Set("abcdefghijklmnopqrstuvwxyz0123456789_.");
+
+function isValidUsernameFormat(value) {
+  return (
+    value.length >= 3 &&
+    value.length <= 30 &&
+    [...value].every((c) => ALLOWED_USERNAME_CHARS.has(c))
+  );
+}
+
 export const registerSchema = z.object({
   name: z.string().min(1).max(100),
   username: z.string().min(3).max(30),
@@ -11,3 +21,21 @@ export const loginSchema = z.object({
   email: z.email(),
   password: z.string().min(1),
 });
+
+export const updateProfileSchema = z
+  .object({
+    name: z.string().min(1).max(100).optional(),
+    username: z
+      .string()
+      .min(3)
+      .max(30)
+      .transform((v) => v.trim().toLowerCase())
+      .refine(isValidUsernameFormat, "Invalid username format")
+      .optional(),
+    bio: z.string().max(160).nullable().optional(),
+    avatarUrl: z.string().url().nullable().optional(),
+    avatarDriveFileId: z.string().min(1).max(128).nullable().optional(),
+  })
+  .refine((data) => Object.keys(data).length > 0, {
+    message: "No fields to update",
+  });

@@ -1,4 +1,4 @@
-import { registerSchema, loginSchema } from "./schemas.js";
+import { registerSchema, loginSchema, updateProfileSchema } from "./schemas.js";
 import authService from "./service.js";
 
 const ACCESS_COOKIE_NAME = "access_token";
@@ -49,4 +49,14 @@ const me = async (req, res) => {
   }
 };
 
-export default { register, login, logout, me };
+const updateProfile = async (req, res) => {
+  try {
+    const data = updateProfileSchema.parse(req.body);
+    const user = await authService.updateProfile(req.auth.id, data);
+    res.json({ user });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+
+export default { register, login, logout, me, updateProfile };
