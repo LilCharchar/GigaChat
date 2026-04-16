@@ -23,7 +23,7 @@ app.use(
     credentials: true,
   })
 );
-app.use(express.json());
+app.use(express.json({ limit: "5mb" }));
 app.use(cookieParser());
 
 app.use(authRoutes);
@@ -32,6 +32,14 @@ app.use(chatRoutes);
 
 app.get("/", (req, res) => {
   res.json({ message: "Hello World!" });
+});
+
+app.use((error, req, res, next) => {
+  if (error?.type === "entity.too.large") {
+    return res.status(413).json({ error: "El archivo es demasiado grande. Maximo 5MB." });
+  }
+
+  return next(error);
 });
 
 initRealtime({ httpServer, frontendOrigin: FRONTEND_ORIGIN });

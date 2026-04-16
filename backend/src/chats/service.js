@@ -85,7 +85,8 @@ export async function listChatMessages({ chatId, userId, limit = 50 }) {
             cm.edited_at,
             cm.deleted_at,
             u.name AS sender_name,
-            u.username AS sender_username
+            u.username AS sender_username,
+            encode(u.avatar, 'base64') AS sender_avatar_base64
      FROM chat_messages cm
      JOIN users u ON u.id = cm.sender_id
      WHERE cm.chat_id = $1
@@ -115,7 +116,8 @@ export async function createMessage({ chatId, senderId, body, clientMessageId = 
               i.edited_at,
               i.deleted_at,
               u.name AS sender_name,
-              u.username AS sender_username
+              u.username AS sender_username,
+              encode(u.avatar, 'base64') AS sender_avatar_base64
        FROM inserted i
        JOIN users u ON u.id = i.sender_id`,
       [chatId, senderId, body]
@@ -134,7 +136,8 @@ export async function createMessage({ chatId, senderId, body, clientMessageId = 
             cm.edited_at,
             cm.deleted_at,
             u.name AS sender_name,
-            u.username AS sender_username
+            u.username AS sender_username,
+            encode(u.avatar, 'base64') AS sender_avatar_base64
      FROM chat_messages cm
      JOIN users u ON u.id = cm.sender_id
      WHERE cm.sender_id = $1
@@ -164,7 +167,8 @@ export async function createMessage({ chatId, senderId, body, clientMessageId = 
               i.edited_at,
               i.deleted_at,
               u.name AS sender_name,
-              u.username AS sender_username
+              u.username AS sender_username,
+              encode(u.avatar, 'base64') AS sender_avatar_base64
        FROM inserted i
        JOIN users u ON u.id = i.sender_id`,
       [chatId, senderId, body, clientMessageId]
@@ -186,7 +190,8 @@ export async function createMessage({ chatId, senderId, body, clientMessageId = 
               cm.edited_at,
               cm.deleted_at,
               u.name AS sender_name,
-              u.username AS sender_username
+              u.username AS sender_username,
+              encode(u.avatar, 'base64') AS sender_avatar_base64
        FROM chat_messages cm
        JOIN users u ON u.id = cm.sender_id
        WHERE cm.sender_id = $1

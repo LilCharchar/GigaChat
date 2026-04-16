@@ -33,8 +33,7 @@ export const updateProfileSchema = z
       .refine(isValidUsernameFormat, "Invalid username format")
       .optional(),
     bio: z.string().max(160).nullable().optional(),
-    avatarUrl: z.string().url().nullable().optional(),
-    avatarDriveFileId: z.string().min(1).max(128).nullable().optional(),
+    avatarBase64: z.string().min(1).nullable().optional(),
   })
   .refine((data) => Object.keys(data).length > 0, {
     message: "No fields to update",

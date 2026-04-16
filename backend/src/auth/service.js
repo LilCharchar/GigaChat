@@ -5,14 +5,15 @@ import jwt from "jsonwebtoken";
 const ACCESS_TOKEN_EXPIRES_IN = "1h";
 
 function mapUser(row) {
+  const avatarBase64 = row.avatar ? Buffer.from(row.avatar).toString("base64") : null;
+
   return {
     id: row.id,
     name: row.name,
     username: row.username,
     email: row.email,
     bio: row.bio,
-    avatarUrl: row.avatar_url,
-    avatarDriveFileId: row.avatar_drive_file_id,
+    avatarBase64,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -35,7 +36,7 @@ const register = async (data) => {
     const result = await pool.query(
       `INSERT INTO users (name, username, email, password_hash) 
        VALUES ($1, $2, $3, $4) 
-       RETURNING id, name, username, email, bio, avatar_url, avatar_drive_file_id, created_at, updated_at`,
+       RETURNING id, name, username, email, bio, avatar, created_at, updated_at`,
       [name, username, email, passwordHash]
     );
     return mapUser(result.rows[0]);
@@ -57,7 +58,7 @@ const login = async (data) => {
   const { email, password } = data;
 
   const result = await pool.query(
-    `SELECT id, name, username, email, bio, avatar_url, avatar_drive_file_id, password_hash, created_at, updated_at
+    `SELECT id, name, username, email, bio, avatar, password_hash, created_at, updated_at
      FROM users
      WHERE email = $1`,
     [email]
@@ -86,7 +87,7 @@ const login = async (data) => {
 
 const getCurrentUser = async (id) => {
   const result = await pool.query(
-    `SELECT id, name, username, email, bio, avatar_url, avatar_drive_file_id, created_at, updated_at
+    `SELECT id, name, username, email, bio, avatar, created_at, updated_at
      FROM users
      WHERE id = $1`,
     [id]
@@ -104,11 +105,26 @@ const updateProfile = async (id, data) => {
     name: "name",
     username: "username",
     bio: "bio",
-    avatarUrl: "avatar_url",
-    avatarDriveFileId: "avatar_drive_file_id",
+    avatarBase64: "avatar",
   };
 
-  const entries = Object.entries(data).filter(([key]) => key in allowedFields);
+  const entries = Object.entries(data)
+    .filter(([key]) => key in allowedFields)
+    .map(([key, value]) => {
+      if (key !== "avatarBase64") {
+        return [key, value];
+      }
+
+      if (value === null) {
+        return [key, null];
+      }
+
+      try {
+        return [key, Buffer.from(value, "base64")];
+      } catch {
+        throw new Error("Invalid avatar base64");
+      }
+    });
 
   if (entries.length === 0) {
     throw new Error("No fields to update");
@@ -122,7 +138,7 @@ const updateProfile = async (id, data) => {
       `UPDATE users
        SET ${assignments.join(", ")}
        WHERE id = $1
-       RETURNING id, name, username, email, bio, avatar_url, avatar_drive_file_id, created_at, updated_at`,
+       RETURNING id, name, username, email, bio, avatar, created_at, updated_at`,
       [id, ...values]
     );
 
