@@ -29,3 +29,27 @@ export async function getChatMessages(req, res) {
     res.status(getStatus(error)).json({ error: error.message });
   }
 }
+
+export async function getDMChats(req, res) {
+  try {
+    const dms = await chatService.listUserDMs(req.auth.id);
+    res.json({ dms });
+  } catch (error) {
+    res.status(getStatus(error)).json({ error: error.message });
+  }
+}
+
+export async function openOrCreateDMWithFriend(req, res) {
+  try {
+    const { friendId } = req.params;
+
+    if (!friendId) {
+      return res.status(400).json({ error: "friendId is required" });
+    }
+
+    const chat = await chatService.getOrCreateDMWithFriend(req.auth.id, friendId);
+    res.json({ chat });
+  } catch (error) {
+    res.status(getStatus(error)).json({ error: error.message });
+  }
+}

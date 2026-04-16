@@ -35,6 +35,17 @@ export async function isActiveMember(userId, chatId) {
   return result.rows.length > 0;
 }
 
+export async function isActiveParticipant(userId, chatId) {
+  // Primero intentar validar como miembro normal (para canales/globales)
+  const isMember = await isActiveMember(userId, chatId);
+  if (isMember) {
+    return true;
+  }
+
+  // Si no es miembro, validar si es un DM entre amigos
+  return isDMChatBetweenFriends(userId, chatId);
+}
+
 export async function getGlobalChatForUser(userId) {
   await ensureUserIsActive(userId);
 
@@ -205,6 +216,7 @@ export async function getMessageById(messageId) {
 }
 
 export async function canModerateChat(userId, chatId) {
+  // Primero verificar si es propietario/admin de un chat de grupo/global
   const result = await pool.query(
     `SELECT cm.role
      FROM chat_members cm
@@ -214,11 +226,13 @@ export async function canModerateChat(userId, chatId) {
     [chatId, userId]
   );
 
-  if (result.rows.length === 0) {
-    return false;
+  if (result.rows.length > 0) {
+    return ["owner", "admin"].includes(result.rows[0].role);
   }
 
-  return ["owner", "admin"].includes(result.rows[0].role);
+  // Para DMs, el usuario siempre puede moderar sus propios mensajes (la validación específica se hace en socket.handlers)
+  // Aquí solo retornamos false porque los DMs no tienen "moderadores"
+  return false;
 }
 
 export async function updateMessageBody(messageId, body) {
@@ -254,6 +268,122 @@ export async function softDeleteMessage(messageId) {
   }
 
   return result.rows[0];
+}
+
+async function isAcceptedFriend(userId1, userId2) {
+  const result = await pool.query(
+    `SELECT id, status
+     FROM friendships
+     WHERE status = 'accepted'
+       AND LEAST(requester_id, addressee_id) = LEAST($1::uuid, $2::uuid)
+       AND GREATEST(requester_id, addressee_id) = GREATEST($1::uuid, $2::uuid)`,
+    [userId1, userId2]
+  );
+
+  return result.rows.length > 0;
+}
+
+export async function getOrCreateDMWithFriend(userId, friendId) {
+  await ensureUserIsActive(userId);
+
+  const isFriend = await isAcceptedFriend(userId, friendId);
+  if (!isFriend) {
+    throw createHttpError("User not found or not your friend", 404);
+  }
+
+  // Asegurar que user1_id < user2_id para consistencia
+  const user1_id = userId < friendId ? userId : friendId;
+  const user2_id = userId < friendId ? friendId : userId;
+
+  // Buscar o crear el DM chat
+  let result = await pool.query(
+    `SELECT c.id, c.type, c.created_at, c.updated_at
+     FROM chats c
+     WHERE c.type = 'dm'
+       AND c.dm_user1_id = $1
+       AND c.dm_user2_id = $2
+       AND c.is_active = TRUE`,
+    [user1_id, user2_id]
+  );
+
+  if (result.rows.length > 0) {
+    return result.rows[0];
+  }
+
+  // Crear nuevo DM chat si no existe
+  const insertResult = await pool.query(
+    `INSERT INTO chats (type, dm_user1_id, dm_user2_id, is_active)
+     VALUES ('dm', $1, $2, TRUE)
+     RETURNING id, type, created_at, updated_at`,
+    [user1_id, user2_id]
+  );
+
+  const newChat = insertResult.rows[0];
+
+  // Agregar ambos usuarios como miembros
+  await pool.query(
+    `INSERT INTO chat_members (chat_id, user_id, role, left_at)
+     VALUES ($1, $2, 'member', NULL), ($1, $3, 'member', NULL)
+     ON CONFLICT DO NOTHING`,
+    [newChat.id, user1_id, user2_id]
+  );
+
+  return newChat;
+}
+
+export async function listUserDMs(userId) {
+  await ensureUserIsActive(userId);
+
+  const result = await pool.query(
+    `SELECT c.id,
+            c.type,
+            c.dm_user1_id,
+            c.dm_user2_id,
+            c.created_at,
+            c.updated_at,
+            CASE 
+              WHEN c.dm_user1_id = $1 THEN u2.id
+              ELSE u1.id
+            END AS friend_id,
+            CASE 
+              WHEN c.dm_user1_id = $1 THEN u2.name
+              ELSE u1.name
+            END AS friend_name,
+            CASE 
+              WHEN c.dm_user1_id = $1 THEN u2.username
+              ELSE u1.username
+            END AS friend_username
+     FROM chats c
+     JOIN chat_members cm ON cm.chat_id = c.id
+     LEFT JOIN users u1 ON u1.id = c.dm_user1_id
+     LEFT JOIN users u2 ON u2.id = c.dm_user2_id
+     WHERE c.type = 'dm'
+       AND c.is_active = TRUE
+       AND cm.user_id = $1
+       AND cm.left_at IS NULL
+       AND ((c.dm_user1_id = $1 OR c.dm_user2_id = $1))
+     ORDER BY c.updated_at DESC`,
+    [userId]
+  );
+
+  return result.rows;
+}
+
+export async function isDMChatBetweenFriends(userId, chatId) {
+  const result = await pool.query(
+    `SELECT c.id, c.dm_user1_id, c.dm_user2_id
+     FROM chats c
+     JOIN chat_members cm ON cm.chat_id = c.id
+     WHERE c.id = $1
+       AND c.type = 'dm'
+       AND c.is_active = TRUE
+       AND cm.user_id = $2
+       AND cm.left_at IS NULL
+       AND ((c.dm_user1_id = $2 OR c.dm_user2_id = $2))`,
+    [chatId, userId]
+  );
+
+  return result.rows.length > 0;
 }
 
 export { createHttpError };

@@ -8,6 +8,7 @@ const {
   activeMessages,
   conversations,
   currentUser,
+  dms,
   draft,
   friendPanelTab,
   friends,
@@ -16,6 +17,7 @@ const {
   handleLogout,
   incomingFriendRequests,
   loadingChat,
+  loadingDMs,
   loadingFriendships,
   loadingAuth,
   outgoingFriendRequests,
@@ -30,6 +32,7 @@ const {
   sendMessage,
   sendingFriendRequest,
   setFriendPanelTab,
+  openDMWithFriend,
 } = useDashboardView();
 </script>
 
@@ -75,6 +78,31 @@ const {
           <strong>{{ conversation.name }}</strong>
           <span>{{ conversation.unread || conversation.members }}</span>
         </button>
+      </section>
+
+      <section class="dv-list-block">
+        <div class="dv-head">
+          <span>Mensajes Directos</span>
+          <span>{{ dms.length }}</span>
+        </div>
+
+        <p v-if="loadingDMs" class="dv-social-empty">Cargando DMs...</p>
+
+        <button
+          v-for="dm in dms"
+          :key="dm.id"
+          class="dv-room"
+          :class="{ 'is-active': dm.id === activeConversationId }"
+          type="button"
+          @click="selectConversation(dm.id)"
+        >
+          <strong>{{ dm.name }}</strong>
+          <span>{{ dm.unread }}</span>
+        </button>
+
+        <p v-if="!dms.length && !loadingDMs" class="dv-social-empty">
+          No hay DMs. Inicia un chat desde la lista de amigos.
+        </p>
       </section>
 
       <button class="dv-logout" :disabled="loadingAuth" type="button" @click="handleLogout">
@@ -206,14 +234,25 @@ const {
                 <strong>{{ friend.name }}</strong>
                 <p>@{{ friend.username }}</p>
               </div>
-              <button
-                class="dv-request-btn is-reject"
-                :disabled="removingFriendId === friend.user_id"
-                type="button"
-                @click="removeFriend(friend.user_id)"
-              >
-                {{ removingFriendId === friend.user_id ? "Quitando" : "Eliminar" }}
-              </button>
+              <div style="display: flex; gap: 0.5rem;">
+                <button
+                  class="dv-request-btn"
+                  style="background-color: #4CAF50; color: white;"
+                  type="button"
+                  @click="openDMWithFriend(friend.user_id, friend.name, friend.username)"
+                  title="Enviar mensaje directo"
+                >
+                  💬
+                </button>
+                <button
+                  class="dv-request-btn is-reject"
+                  :disabled="removingFriendId === friend.user_id"
+                  type="button"
+                  @click="removeFriend(friend.user_id)"
+                >
+                  {{ removingFriendId === friend.user_id ? "Quitando" : "Eliminar" }}
+                </button>
+              </div>
             </article>
             <p v-if="!friends.length && !loadingFriendships" class="dv-social-empty">
               Aun no tienes amigos agregados.

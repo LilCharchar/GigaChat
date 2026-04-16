@@ -10,4 +10,12 @@ export const chatService = {
       params: { limit },
     });
   },
+
+  getDMs() {
+    return api.get("/chats/dms");
+  },
+
+  openDMWithFriend(friendId) {
+    return api.get(`/chats/dms/${encodeURIComponent(friendId)}`);
+  },
 };

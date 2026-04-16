@@ -30,6 +30,29 @@ function createDefaultConversation(chat) {
     metrics: structuredClone(EMPTY_METRICS),
     roster: [],
     messages: [],
+    type: "channel",
+  };
+}
+
+function createDMConversation(dm, friendName, friendUsername) {
+  return {
+    id: dm.id,
+    name: friendName || friendUsername || "Usuario",
+    topic: `Conversación directa con ${friendName || friendUsername}`,
+    status: "En línea",
+    mode: "direct message",
+    members: 1,
+    unread: 0,
+    updatedAt: "Ahora",
+    signalBars: ["0.5rem", "0.9rem", "1.3rem", "1.7rem", "1.2rem"],
+    pinnedTitle: `DM: ${friendName || friendUsername}`,
+    pinnedNote: "Conversación privada con tu amigo.",
+    metrics: structuredClone(EMPTY_METRICS),
+    roster: [],
+    messages: [],
+    type: "dm",
+    friendName,
+    friendUsername,
   };
 }
 
@@ -94,6 +117,9 @@ export function useDashboardView() {
   const loadingChat = ref(false);
   const chatError = ref("");
   const socketConnected = ref(false);
+  const loadingDMs = ref(false);
+  const dms = ref([]);
+
   let friendshipsRefreshTimer = null;
   let socketUnsubscribeMessageNew = null;
   let socketUnsubscribeConnect = null;
@@ -104,6 +130,7 @@ export function useDashboardView() {
   const activeConversation = computed(
     () =>
       conversations.value.find((conversation) => conversation.id === activeConversationId.value) ??
+      dms.value.find((dm) => dm.id === activeConversationId.value) ??
       null
   );
 
@@ -142,6 +169,41 @@ export function useDashboardView() {
 
   function selectConversation(conversationId) {
     activeConversationId.value = conversationId;
+    subscribeActiveConversation().catch(() => {});
+    
+    // Cargar mensajes si no existen
+    const conversation = conversations.value.find((c) => c.id === conversationId) ||
+                        dms.value.find((d) => d.id === conversationId);
+    if (conversation && (!conversation.messages || conversation.messages.length === 0)) {
+      loadConversationMessages(conversationId);
+    }
+  }
+
+  async function loadConversationMessages(conversationId) {
+    try {
+      const messagesResponse = await chatService.getMessages(conversationId, 50);
+      const serverMessages = messagesResponse?.data?.messages ?? [];
+      
+      const conversation = conversations.value.find((c) => c.id === conversationId) ||
+                          dms.value.find((d) => d.id === conversationId);
+      
+      if (conversation) {
+        conversation.messages = serverMessages.map((message) =>
+          formatServerMessage({
+            id: message.id,
+            senderId: message.sender_id,
+            senderName: message.sender_name,
+            senderUsername: message.sender_username,
+            body: message.body,
+            createdAt: message.created_at,
+            clientMessageId: message.client_message_id,
+          })
+        );
+        conversation.metrics[0].value = String(conversation.messages.length);
+      }
+    } catch (error) {
+      console.error("Error loading conversation messages:", error);
+    }
   }
 
   function formatServerMessage(message) {
@@ -231,6 +293,71 @@ export function useDashboardView() {
     }
   }
 
+  async function loadDMs() {
+    loadingDMs.value = true;
+
+    try {
+      const dmsResponse = await chatService.getDMs();
+      const dmList = dmsResponse?.data?.dms ?? [];
+
+      dms.value = dmList.map((dm) =>
+        createDMConversation(dm, dm.friend_name, dm.friend_username)
+      );
+    } catch (error) {
+      // Silenciosamente fallar en cargar DMs no debería romper la app
+      console.error("Error loading DMs:", error);
+      dms.value = [];
+    } finally {
+      loadingDMs.value = false;
+    }
+  }
+
+  async function openDMWithFriend(friendId, friendName, friendUsername) {
+    chatError.value = "";
+
+    try {
+      const response = await chatService.openDMWithFriend(friendId);
+      const chat = response?.data?.chat;
+
+      if (!chat?.id) {
+        throw new Error("No se pudo abrir el DM");
+      }
+
+      let conversation = dms.value.find((dm) => dm.id === chat.id);
+      if (!conversation) {
+        const dmConversation = createDMConversation(chat, friendName, friendUsername);
+        dms.value.push(dmConversation);
+        conversation = dmConversation;
+      }
+
+      activeConversationId.value = chat.id;
+
+      // Cargar mensajes del DM
+      const messagesResponse = await chatService.getMessages(chat.id, 50);
+      const serverMessages = messagesResponse?.data?.messages ?? [];
+      
+      if (conversation) {
+        conversation.messages = serverMessages.map((message) =>
+          formatServerMessage({
+            id: message.id,
+            senderId: message.sender_id,
+            senderName: message.sender_name,
+            senderUsername: message.sender_username,
+            body: message.body,
+            createdAt: message.created_at,
+            clientMessageId: message.client_message_id,
+          })
+        );
+        conversation.metrics[0].value = String(conversation.messages.length);
+      }
+
+      // Suscribir al socket
+      await subscribeActiveConversation().catch(() => {});
+    } catch (error) {
+      chatError.value = error?.response?.data?.error || error.message || "No fue posible abrir el DM.";
+    }
+  }
+
   async function subscribeActiveConversation() {
     if (!activeConversation.value?.id) {
       return;
@@ -250,7 +377,8 @@ export function useDashboardView() {
     });
 
     socketUnsubscribeMessageNew = chatSocketService.on("message:new", (message) => {
-      const conversation = conversations.value.find((chat) => chat.id === message.chatId);
+      const conversation = conversations.value.find((chat) => chat.id === message.chatId) ||
+                          dms.value.find((dm) => dm.id === message.chatId);
       if (!conversation) {
         return;
       }
@@ -454,6 +582,7 @@ export function useDashboardView() {
 
   onMounted(async () => {
     await loadGlobalChat();
+    await loadDMs();
     chatSocketService.connect();
     setupSocketListeners();
     await subscribeActiveConversation().catch((error) => {
@@ -486,12 +615,14 @@ export function useDashboardView() {
     activeStatusText,
     conversations,
     currentUser,
+    dms,
     draft,
     friendPanelTab,
     friends,
     friendshipError,
     chatError,
     loadingChat,
+    loadingDMs,
     socketConnected,
     handleLogout,
     incomingFriendRequests,
@@ -511,5 +642,7 @@ export function useDashboardView() {
     sendingFriendRequest,
     setFriendPanelTab,
     totalUnread,
+    openDMWithFriend,
+    loadDMs,
   };
 }

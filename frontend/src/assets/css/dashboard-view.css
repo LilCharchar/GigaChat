@@ -5,7 +5,7 @@
   --dv-text: #f3f3ef;
   --dv-muted: rgba(243, 243, 239, 0.62);
   --dv-accent: #d0ff2f;
-  min-height: 100vh;
+  height: 100vh;
   display: grid;
   grid-template-columns: 260px minmax(0, 1fr);
   background:
@@ -13,6 +13,7 @@
     radial-gradient(circle at 78% 20%, rgba(208, 255, 47, 0.04), transparent 18rem),
     linear-gradient(180deg, #060606, #020202);
   color: var(--dv-text);
+  overflow: hidden;
 }
 
 .dv-sidebar,
@@ -191,6 +192,8 @@
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   gap: 1rem;
+  height: 100%;
+  min-height: 0;
 }
 
 .dv-top {
@@ -430,6 +433,7 @@
   grid-template-rows: minmax(0, 1fr) auto;
   border-radius: 1.4rem;
   overflow: hidden;
+  height: 100%;
 }
 
 .dv-messages::before {
@@ -454,12 +458,35 @@
 .dv-messages {
   position: relative;
   z-index: 1;
+  flex: 1;
   min-height: 0;
   overflow: auto;
   padding: 1rem 40% 1rem 1rem;
   display: flex;
   flex-direction: column;
   gap: 0.9rem;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(208, 255, 47, 0.5) transparent;
+}
+
+.dv-messages::-webkit-scrollbar {
+  width: 10px;
+}
+
+.dv-messages::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.dv-messages::-webkit-scrollbar-thumb {
+  background: rgba(208, 255, 47, 0.5);
+  border-radius: 5px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.dv-messages::-webkit-scrollbar-thumb:hover {
+  background: rgba(208, 255, 47, 0.8);
+  background-clip: padding-box;
 }
 
 .dv-messages::before,
