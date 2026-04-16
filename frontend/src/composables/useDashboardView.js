@@ -92,6 +92,11 @@ function getInitials(name = "") {
     .toUpperCase();
 }
 
+function toAvatarDataUrl(base64) {
+  if (!base64) return "";
+  return `data:;base64,${base64}`;
+}
+
 function getFriendshipError(err) {
   return err?.response?.data?.error || "No fue posible cargar amistades.";
 }
@@ -503,6 +508,8 @@ export function useDashboardView() {
       username: request.requester_username,
       name: request.requester_name || request.requester_username,
       initials: getInitials(request.requester_name || request.requester_username),
+      avatarBase64: request.requester_avatar_base64 || null,
+      avatarUrl: toAvatarDataUrl(request.requester_avatar_base64),
     }));
   }
 
@@ -512,6 +519,8 @@ export function useDashboardView() {
       username: request.addressee_username,
       name: request.addressee_name || request.addressee_username,
       initials: getInitials(request.addressee_name || request.addressee_username),
+      avatarBase64: request.addressee_avatar_base64 || null,
+      avatarUrl: toAvatarDataUrl(request.addressee_avatar_base64),
     }));
   }
 
@@ -521,6 +530,8 @@ export function useDashboardView() {
       username: friend.username,
       name: friend.name || friend.username,
       initials: getInitials(friend.name || friend.username),
+      avatarBase64: friend.avatar_base64 || null,
+      avatarUrl: toAvatarDataUrl(friend.avatar_base64),
       online: true,
     }));
   }

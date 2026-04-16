@@ -103,7 +103,8 @@ const listIncoming = async (currentUserId) => {
             f.created_at,
             u.id AS requester_id,
             u.username AS requester_username,
-            u.name AS requester_name
+            u.name AS requester_name,
+            encode(u.avatar, 'base64') AS requester_avatar_base64
      FROM friendships f
      JOIN users u ON u.id = f.requester_id
      WHERE f.addressee_id = $1
@@ -123,7 +124,8 @@ const listOutgoing = async (currentUserId) => {
             f.created_at,
             u.id AS addressee_id,
             u.username AS addressee_username,
-            u.name AS addressee_name
+            u.name AS addressee_name,
+            encode(u.avatar, 'base64') AS addressee_avatar_base64
      FROM friendships f
      JOIN users u ON u.id = f.addressee_id
      WHERE f.requester_id = $1
@@ -177,7 +179,8 @@ const listFriends = async (currentUserId) => {
             f.updated_at,
             u.id AS user_id,
             u.username,
-            u.name
+            u.name,
+            encode(u.avatar, 'base64') AS avatar_base64
      FROM friendships f
      JOIN users u
        ON u.id = CASE

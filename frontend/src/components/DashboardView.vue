@@ -203,7 +203,14 @@ const {
                 :key="request.id"
                 class="dv-friend dv-friend-request"
               >
-                <div class="dv-friend-mark">{{ request.initials }}</div>
+                <div v-if="request.avatarUrl" class="dv-friend-mark dv-friend-mark-avatar">
+                  <img
+                    class="dv-friend-avatar"
+                    :src="request.avatarUrl"
+                    :alt="`Avatar de ${request.name}`"
+                  />
+                </div>
+                <div v-else class="dv-friend-mark">{{ request.initials }}</div>
                 <div>
                   <strong>{{ request.name }}</strong>
                   <p>@{{ request.username }}</p>
@@ -242,7 +249,14 @@ const {
                 :key="request.id"
                 class="dv-friend dv-friend-request"
               >
-                <div class="dv-friend-mark">{{ request.initials }}</div>
+                <div v-if="request.avatarUrl" class="dv-friend-mark dv-friend-mark-avatar">
+                  <img
+                    class="dv-friend-avatar"
+                    :src="request.avatarUrl"
+                    :alt="`Avatar de ${request.name}`"
+                  />
+                </div>
+                <div v-else class="dv-friend-mark">{{ request.initials }}</div>
                 <div>
                   <strong>{{ request.name }}</strong>
                   <p>@{{ request.username }}</p>
@@ -260,7 +274,14 @@ const {
 
           <template v-else>
             <article v-for="friend in friends" :key="friend.user_id" class="dv-friend">
-              <div class="dv-friend-mark">{{ friend.initials }}</div>
+              <div v-if="friend.avatarUrl" class="dv-friend-mark dv-friend-mark-avatar">
+                <img
+                  class="dv-friend-avatar"
+                  :src="friend.avatarUrl"
+                  :alt="`Avatar de ${friend.name}`"
+                />
+              </div>
+              <div v-else class="dv-friend-mark">{{ friend.initials }}</div>
               <div>
                 <strong>{{ friend.name }}</strong>
                 <p>@{{ friend.username }}</p>
