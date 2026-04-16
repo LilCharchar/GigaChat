@@ -20,12 +20,30 @@ const {
   loadingDMs,
   loadingFriendships,
   loadingAuth,
+  closeProfileModal,
+  handleAvatarInput,
+  jumpToLatestMessages,
+  messagesContainerRef,
+  onMessagesScroll,
   outgoingFriendRequests,
+  openProfileModal,
   pendingFriendActionId,
+  pendingMessagesBelow,
+  profileAvatarPreview,
+  profileBio,
+  profileError,
+  profileModalOpen,
+  profileName,
+  profileSuccess,
+  profileUsername,
   removingFriendId,
+  removeAvatarFromProfile,
   requestUsername,
   removeFriend,
   respondToFriendRequest,
+  saveProfileChanges,
+  savingProfile,
+  showScrollToLatest,
   socketConnected,
   selectConversation,
   sendFriendRequest,
@@ -44,8 +62,21 @@ const {
         <h1>Chadline</h1>
       </div>
 
-      <section class="dv-user">
-        <div class="dv-user-mark">
+      <section
+        class="dv-user"
+        role="button"
+        tabindex="0"
+        @click="openProfileModal"
+        @keydown.enter.prevent="openProfileModal"
+      >
+        <div v-if="currentUser.avatarBase64" class="dv-user-mark dv-user-mark-avatar">
+          <img
+            class="dv-user-avatar"
+            :src="`data:;base64,${currentUser.avatarBase64}`"
+            alt="Avatar de perfil"
+          />
+        </div>
+        <div v-else class="dv-user-mark">
           {{
             (currentUser.name || currentUser.username || currentUser.email || "G")
               .slice(0, 1)
@@ -234,13 +265,13 @@ const {
                 <strong>{{ friend.name }}</strong>
                 <p>@{{ friend.username }}</p>
               </div>
-              <div style="display: flex; gap: 0.5rem;">
+              <div style="display: flex; gap: 0.5rem">
                 <button
                   class="dv-request-btn"
-                  style="background-color: #4CAF50; color: white;"
+                  style="background-color: #4caf50; color: white"
+                  title="Enviar mensaje directo"
                   type="button"
                   @click="openDMWithFriend(friend.user_id, friend.name, friend.username)"
-                  title="Enviar mensaje directo"
                 >
                   💬
                 </button>
@@ -262,7 +293,7 @@ const {
       </header>
 
       <section class="dv-chat">
-        <div class="dv-messages">
+        <div ref="messagesContainerRef" class="dv-messages" @scroll="onMessagesScroll">
           <p v-if="!activeMessages.length" class="dv-social-empty">
             Aun no hay mensajes en este chat.
           </p>
@@ -272,13 +303,30 @@ const {
             class="dv-message"
             :class="{ 'is-own': message.own }"
           >
-            <div class="dv-message-mark">{{ message.initials }}</div>
+            <div v-if="message.avatarBase64" class="dv-message-mark dv-message-mark-avatar">
+              <img
+                class="dv-message-avatar"
+                :src="`data:;base64,${message.avatarBase64}`"
+                :alt="`Avatar de ${message.author}`"
+              />
+            </div>
+            <div v-else class="dv-message-mark">{{ message.initials }}</div>
             <div class="dv-bubble">
               <strong>{{ message.author }}</strong>
               <p>{{ message.text }}</p>
             </div>
           </article>
         </div>
+
+        <button
+          v-if="showScrollToLatest"
+          class="dv-scroll-latest"
+          type="button"
+          @click="jumpToLatestMessages"
+        >
+          {{ pendingMessagesBelow > 1 ? `${pendingMessagesBelow} nuevos` : "Nuevo mensaje" }}
+          <span>Bajar</span>
+        </button>
 
         <form class="dv-composer" @submit.prevent="sendMessage">
           <textarea
@@ -292,5 +340,64 @@ const {
         </form>
       </section>
     </section>
+
+    <div v-if="profileModalOpen" class="dv-modal-backdrop" @click.self="closeProfileModal">
+      <section class="dv-modal" role="dialog" aria-modal="true" aria-label="Editar perfil">
+        <header class="dv-modal-head">
+          <p class="dv-eyebrow">Perfil</p>
+          <button class="dv-modal-close" type="button" @click="closeProfileModal">Cerrar</button>
+        </header>
+
+        <div class="dv-modal-avatar">
+          <div v-if="profileAvatarPreview" class="dv-modal-avatar-preview">
+            <img :src="profileAvatarPreview" alt="Vista previa del avatar" />
+          </div>
+          <div v-else class="dv-modal-avatar-preview is-fallback">
+            {{
+              (profileName || currentUser.name || currentUser.username || "G")
+                .slice(0, 1)
+                .toUpperCase()
+            }}
+          </div>
+
+          <div class="dv-modal-avatar-actions">
+            <label class="dv-modal-file-btn">
+              Subir imagen
+              <input type="file" accept="image/*" @change="handleAvatarInput" />
+            </label>
+            <button class="dv-request-btn is-reject" type="button" @click="removeAvatarFromProfile">
+              Quitar
+            </button>
+          </div>
+        </div>
+
+        <form class="dv-modal-form" @submit.prevent="saveProfileChanges">
+          <label>
+            <span>Nombre</span>
+            <input v-model="profileName" class="dv-friend-input" type="text" maxlength="100" />
+          </label>
+          <label>
+            <span>Username</span>
+            <input v-model="profileUsername" class="dv-friend-input" type="text" maxlength="30" />
+          </label>
+          <label>
+            <span>Bio</span>
+            <textarea v-model="profileBio" class="dv-input dv-modal-bio" maxlength="160"></textarea>
+          </label>
+
+          <p v-if="profileError" class="dv-social-error">{{ profileError }}</p>
+          <p v-else-if="profileSuccess" class="dv-social-empty">{{ profileSuccess }}</p>
+
+          <div class="dv-modal-actions">
+            <button class="dv-request-btn" type="button" @click="closeProfileModal">
+              Cancelar
+            </button>
+            <button class="dv-send dv-modal-save" :disabled="savingProfile" type="submit">
+              {{ savingProfile ? "Guardando..." : "Guardar" }}
+            </button>
+          </div>
+        </form>
+      </section>
+    </div>
   </main>
 </template>

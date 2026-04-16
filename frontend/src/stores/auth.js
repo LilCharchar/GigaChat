@@ -114,5 +114,28 @@ export const useAuthStore = defineStore("auth", {
         this.loadingAuth = false;
       }
     },
+
+    async updateProfile(payload) {
+      this.loadingAuth = true;
+      this.error = "";
+
+      try {
+        const response = await authService.updateProfile(payload);
+        const updatedUser = response?.data?.user;
+
+        if (!updatedUser) {
+          throw new Error("No se recibio el usuario actualizado.");
+        }
+
+        this.user = updatedUser;
+        return { ok: true };
+      } catch (err) {
+        const message = mapError(err);
+        this.error = message;
+        return { ok: false, error: message };
+      } finally {
+        this.loadingAuth = false;
+      }
+    },
   },
 });

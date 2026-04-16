@@ -13,6 +13,10 @@ export const authService = {
     return api.get("/me");
   },
 
+  updateProfile(payload) {
+    return api.patch("/me/profile", payload);
+  },
+
   logout() {
     return api.post("/logout");
   },

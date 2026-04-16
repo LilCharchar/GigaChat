@@ -75,6 +75,12 @@
   gap: 0.8rem;
   padding: 0.85rem;
   align-items: center;
+  cursor: pointer;
+}
+
+.dv-user:focus-visible {
+  outline: 2px solid rgba(208, 255, 47, 0.6);
+  outline-offset: 2px;
 }
 
 .dv-user-mark,
@@ -91,6 +97,16 @@
   height: 2.4rem;
   background: rgba(208, 255, 47, 0.12);
   color: var(--dv-accent);
+}
+
+.dv-user-mark-avatar {
+  overflow: hidden;
+}
+
+.dv-user-avatar {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .dv-user strong,
@@ -415,6 +431,16 @@
   font-size: 0.7rem;
 }
 
+.dv-message-mark-avatar {
+  overflow: hidden;
+}
+
+.dv-message-avatar {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 .dv-friend-dot {
   width: 0.55rem;
   height: 0.55rem;
@@ -434,6 +460,32 @@
   border-radius: 1.4rem;
   overflow: hidden;
   height: 100%;
+}
+
+.dv-scroll-latest {
+  position: absolute;
+  right: 1rem;
+  bottom: 5.2rem;
+  z-index: 3;
+  border: 1px solid rgba(208, 255, 47, 0.4);
+  border-radius: 999px;
+  background: rgba(8, 8, 8, 0.9);
+  color: var(--dv-accent);
+  min-height: 2.2rem;
+  padding: 0 0.8rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.dv-scroll-latest span {
+  color: var(--dv-text);
+  opacity: 0.85;
+  font-size: 0.68rem;
+  text-transform: uppercase;
 }
 
 .dv-messages::before {
@@ -566,6 +618,116 @@
 .dv-send {
   min-width: 8.5rem;
   border-radius: 1rem;
+}
+
+.dv-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 2, 2, 0.7);
+  backdrop-filter: blur(4px);
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  z-index: 30;
+}
+
+.dv-modal {
+  width: min(30rem, 100%);
+  border: 1px solid var(--dv-line);
+  border-radius: 1.1rem;
+  background: linear-gradient(180deg, rgba(10, 10, 10, 0.98), rgba(8, 8, 8, 0.96));
+  padding: 1rem;
+}
+
+.dv-modal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.dv-modal-close {
+  border: 1px solid var(--dv-line);
+  border-radius: 0.65rem;
+  background: transparent;
+  color: var(--dv-muted);
+  min-height: 2rem;
+  padding: 0 0.8rem;
+}
+
+.dv-modal-avatar {
+  margin-top: 0.8rem;
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.dv-modal-avatar-preview {
+  width: 3.1rem;
+  height: 3.1rem;
+  border-radius: 999px;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  background: rgba(208, 255, 47, 0.12);
+  color: var(--dv-accent);
+  font-weight: 800;
+}
+
+.dv-modal-avatar-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.dv-modal-avatar-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.dv-modal-file-btn {
+  border: 1px solid rgba(208, 255, 47, 0.3);
+  border-radius: 0.65rem;
+  padding: 0.35rem 0.6rem;
+  color: var(--dv-accent);
+  font-size: 0.78rem;
+}
+
+.dv-modal-file-btn input {
+  display: none;
+}
+
+.dv-modal-form {
+  margin-top: 1rem;
+  display: grid;
+  gap: 0.7rem;
+}
+
+.dv-modal-form label {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.dv-modal-form span {
+  color: var(--dv-muted);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.dv-modal-bio {
+  min-height: 6.3rem;
+}
+
+.dv-modal-actions {
+  margin-top: 0.35rem;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.55rem;
+}
+
+.dv-modal-save {
+  min-height: 2.3rem;
+  min-width: 7rem;
 }
 
 @media (max-width: 1040px) {

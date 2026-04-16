@@ -1,4 +1,4 @@
-import { computed, onBeforeUnmount, onMounted, ref } from "vue";
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from "vue";
 import { storeToRefs } from "pinia";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "../stores/auth";
@@ -7,6 +7,7 @@ import { chatService } from "../services/chatService";
 import { chatSocketService } from "../services/chatSocketService";
 
 const FRIENDSHIPS_REFRESH_MS = 8000;
+const AUTO_SCROLL_BOTTOM_THRESHOLD = 120;
 
 const EMPTY_METRICS = [
   { label: "Mensajes", value: "0" },
@@ -119,6 +120,18 @@ export function useDashboardView() {
   const socketConnected = ref(false);
   const loadingDMs = ref(false);
   const dms = ref([]);
+  const messagesContainerRef = ref(null);
+  const showScrollToLatest = ref(false);
+  const pendingMessagesBelow = ref(0);
+  const profileModalOpen = ref(false);
+  const savingProfile = ref(false);
+  const profileError = ref("");
+  const profileSuccess = ref("");
+  const profileName = ref("");
+  const profileUsername = ref("");
+  const profileBio = ref("");
+  const profileAvatarBase64 = ref(null);
+  const profileAvatarMode = ref("unchanged");
 
   let friendshipsRefreshTimer = null;
   let socketUnsubscribeMessageNew = null;
@@ -126,6 +139,17 @@ export function useDashboardView() {
   let socketUnsubscribeDisconnect = null;
 
   const currentUser = computed(() => user.value ?? {});
+  const profileAvatarPreview = computed(() => {
+    if (profileAvatarMode.value === "removed") return "";
+
+    const currentAvatar =
+      profileAvatarMode.value === "updated"
+        ? profileAvatarBase64.value
+        : currentUser.value.avatarBase64;
+
+    if (!currentAvatar) return "";
+    return `data:;base64,${currentAvatar}`;
+  });
 
   const activeConversation = computed(
     () =>
@@ -167,13 +191,45 @@ export function useDashboardView() {
 
   const messageCount = computed(() => activeConversation.value?.messages?.length ?? 0);
 
+  function isNearMessagesBottom() {
+    const el = messagesContainerRef.value;
+    if (!el) return true;
+
+    const distanceToBottom = el.scrollHeight - (el.scrollTop + el.clientHeight);
+    return distanceToBottom <= AUTO_SCROLL_BOTTOM_THRESHOLD;
+  }
+
+  function scrollMessagesToBottom({ smooth = true } = {}) {
+    const el = messagesContainerRef.value;
+    if (!el) return;
+
+    el.scrollTo({
+      top: el.scrollHeight,
+      behavior: smooth ? "smooth" : "auto",
+    });
+  }
+
+  function onMessagesScroll() {
+    if (isNearMessagesBottom()) {
+      showScrollToLatest.value = false;
+      pendingMessagesBelow.value = 0;
+    }
+  }
+
+  function jumpToLatestMessages() {
+    showScrollToLatest.value = false;
+    pendingMessagesBelow.value = 0;
+    scrollMessagesToBottom({ smooth: true });
+  }
+
   function selectConversation(conversationId) {
     activeConversationId.value = conversationId;
     subscribeActiveConversation().catch(() => {});
-    
+
     // Cargar mensajes si no existen
-    const conversation = conversations.value.find((c) => c.id === conversationId) ||
-                        dms.value.find((d) => d.id === conversationId);
+    const conversation =
+      conversations.value.find((c) => c.id === conversationId) ||
+      dms.value.find((d) => d.id === conversationId);
     if (conversation && (!conversation.messages || conversation.messages.length === 0)) {
       loadConversationMessages(conversationId);
     }
@@ -183,10 +239,11 @@ export function useDashboardView() {
     try {
       const messagesResponse = await chatService.getMessages(conversationId, 50);
       const serverMessages = messagesResponse?.data?.messages ?? [];
-      
-      const conversation = conversations.value.find((c) => c.id === conversationId) ||
-                          dms.value.find((d) => d.id === conversationId);
-      
+
+      const conversation =
+        conversations.value.find((c) => c.id === conversationId) ||
+        dms.value.find((d) => d.id === conversationId);
+
       if (conversation) {
         conversation.messages = serverMessages.map((message) =>
           formatServerMessage({
@@ -194,12 +251,15 @@ export function useDashboardView() {
             senderId: message.sender_id,
             senderName: message.sender_name,
             senderUsername: message.sender_username,
+            senderAvatarBase64: message.sender_avatar_base64,
             body: message.body,
             createdAt: message.created_at,
             clientMessageId: message.client_message_id,
           })
         );
         conversation.metrics[0].value = String(conversation.messages.length);
+        await nextTick();
+        scrollMessagesToBottom({ smooth: false });
       }
     } catch (error) {
       console.error("Error loading conversation messages:", error);
@@ -216,6 +276,7 @@ export function useDashboardView() {
       text: message.body,
       time: timeLabelFromDate(message.createdAt),
       own: isOwn,
+      avatarBase64: message.senderAvatarBase64 || message.sender_avatar_base64 || null,
       senderId: message.senderId,
       senderName: message.senderName || null,
       senderUsername: message.senderUsername || null,
@@ -231,8 +292,10 @@ export function useDashboardView() {
 
     const existingById = conversation.messages.find((message) => message.id === incoming.id);
     if (existingById) {
+      existingById.author = incoming.author;
       existingById.text = incoming.text;
       existingById.time = incoming.time;
+      existingById.avatarBase64 = incoming.avatarBase64 || existingById.avatarBase64 || null;
       return;
     }
 
@@ -242,9 +305,12 @@ export function useDashboardView() {
       );
       if (existingByClientId) {
         existingByClientId.id = incoming.id;
+        existingByClientId.author = incoming.author;
         existingByClientId.text = incoming.text;
         existingByClientId.time = incoming.time;
         existingByClientId.createdAt = incoming.createdAt;
+        existingByClientId.avatarBase64 =
+          incoming.avatarBase64 || existingByClientId.avatarBase64 || null;
         return;
       }
     }
@@ -274,6 +340,7 @@ export function useDashboardView() {
           senderId: message.sender_id,
           senderName: message.sender_name,
           senderUsername: message.sender_username,
+          senderAvatarBase64: message.sender_avatar_base64,
           body: message.body,
           createdAt: message.created_at,
           clientMessageId: message.client_message_id,
@@ -283,6 +350,8 @@ export function useDashboardView() {
       conversation.metrics[0].value = String(conversation.messages.length);
       conversations.value = [conversation];
       activeConversationId.value = conversation.id;
+      await nextTick();
+      scrollMessagesToBottom({ smooth: false });
     } catch (error) {
       chatError.value =
         error?.response?.data?.error || error.message || "No fue posible cargar el chat.";
@@ -300,9 +369,7 @@ export function useDashboardView() {
       const dmsResponse = await chatService.getDMs();
       const dmList = dmsResponse?.data?.dms ?? [];
 
-      dms.value = dmList.map((dm) =>
-        createDMConversation(dm, dm.friend_name, dm.friend_username)
-      );
+      dms.value = dmList.map((dm) => createDMConversation(dm, dm.friend_name, dm.friend_username));
     } catch (error) {
       // Silenciosamente fallar en cargar DMs no debería romper la app
       console.error("Error loading DMs:", error);
@@ -335,7 +402,7 @@ export function useDashboardView() {
       // Cargar mensajes del DM
       const messagesResponse = await chatService.getMessages(chat.id, 50);
       const serverMessages = messagesResponse?.data?.messages ?? [];
-      
+
       if (conversation) {
         conversation.messages = serverMessages.map((message) =>
           formatServerMessage({
@@ -343,18 +410,22 @@ export function useDashboardView() {
             senderId: message.sender_id,
             senderName: message.sender_name,
             senderUsername: message.sender_username,
+            senderAvatarBase64: message.sender_avatar_base64,
             body: message.body,
             createdAt: message.created_at,
             clientMessageId: message.client_message_id,
           })
         );
         conversation.metrics[0].value = String(conversation.messages.length);
+        await nextTick();
+        scrollMessagesToBottom({ smooth: false });
       }
 
       // Suscribir al socket
       await subscribeActiveConversation().catch(() => {});
     } catch (error) {
-      chatError.value = error?.response?.data?.error || error.message || "No fue posible abrir el DM.";
+      chatError.value =
+        error?.response?.data?.error || error.message || "No fue posible abrir el DM.";
     }
   }
 
@@ -377,16 +448,35 @@ export function useDashboardView() {
     });
 
     socketUnsubscribeMessageNew = chatSocketService.on("message:new", (message) => {
-      const conversation = conversations.value.find((chat) => chat.id === message.chatId) ||
-                          dms.value.find((dm) => dm.id === message.chatId);
+      const conversation =
+        conversations.value.find((chat) => chat.id === message.chatId) ||
+        dms.value.find((dm) => dm.id === message.chatId);
       if (!conversation) {
         return;
       }
 
+      const isActiveChat = activeConversationId.value === message.chatId;
+      const shouldStickToBottom = isActiveChat && isNearMessagesBottom();
       const normalized = formatServerMessage(message);
       pushOrUpdateMessage(conversation, normalized);
       conversation.updatedAt = "Ahora";
       conversation.metrics[0].value = String(conversation.messages.length);
+
+      if (!isActiveChat) {
+        return;
+      }
+
+      nextTick(() => {
+        if (shouldStickToBottom || normalized.own) {
+          scrollMessagesToBottom({ smooth: true });
+          showScrollToLatest.value = false;
+          pendingMessagesBelow.value = 0;
+          return;
+        }
+
+        pendingMessagesBelow.value += 1;
+        showScrollToLatest.value = true;
+      });
     });
   }
 
@@ -551,6 +641,7 @@ export function useDashboardView() {
       text: message,
       time: nowLabel(),
       own: true,
+      avatarBase64: currentUser.value.avatarBase64 || null,
       senderId: currentUser.value.id,
       createdAt: new Date().toISOString(),
       clientMessageId,
@@ -560,6 +651,10 @@ export function useDashboardView() {
     activeConversation.value.updatedAt = "Ahora";
     activeConversation.value.metrics[0].value = String(activeConversation.value.messages.length);
     draft.value = "";
+    await nextTick();
+    scrollMessagesToBottom({ smooth: true });
+    showScrollToLatest.value = false;
+    pendingMessagesBelow.value = 0;
 
     try {
       await chatSocketService.sendMessage({
@@ -570,6 +665,108 @@ export function useDashboardView() {
     } catch (error) {
       chatError.value = error.message || "No fue posible enviar el mensaje.";
     }
+  }
+
+  function openProfileModal() {
+    profileError.value = "";
+    profileSuccess.value = "";
+    profileName.value = currentUser.value.name || "";
+    profileUsername.value = currentUser.value.username || "";
+    profileBio.value = currentUser.value.bio || "";
+    profileAvatarBase64.value = null;
+    profileAvatarMode.value = "unchanged";
+    profileModalOpen.value = true;
+  }
+
+  function closeProfileModal() {
+    profileModalOpen.value = false;
+    profileError.value = "";
+    profileSuccess.value = "";
+    profileAvatarBase64.value = null;
+    profileAvatarMode.value = "unchanged";
+  }
+
+  async function handleAvatarInput(event) {
+    profileError.value = "";
+    const [file] = event?.target?.files || [];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      profileError.value = "Selecciona un archivo de imagen valido.";
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      profileError.value = "La imagen no debe superar 2MB.";
+      return;
+    }
+
+    const result = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(new Error("No fue posible leer la imagen."));
+      reader.readAsDataURL(file);
+    });
+
+    if (typeof result !== "string" || !result.includes(",")) {
+      profileError.value = "No fue posible procesar la imagen.";
+      return;
+    }
+
+    profileAvatarBase64.value = result.split(",")[1] || null;
+    profileAvatarMode.value = "updated";
+  }
+
+  function removeAvatarFromProfile() {
+    profileError.value = "";
+    profileAvatarBase64.value = null;
+    profileAvatarMode.value = "removed";
+  }
+
+  async function saveProfileChanges() {
+    profileError.value = "";
+    profileSuccess.value = "";
+    savingProfile.value = true;
+
+    const payload = {};
+    const nextName = profileName.value.trim();
+    const nextUsername = profileUsername.value.trim().toLowerCase();
+    const nextBio = profileBio.value.trim() || null;
+
+    if (nextName && nextName !== (currentUser.value.name || "")) {
+      payload.name = nextName;
+    }
+
+    if (nextUsername && nextUsername !== (currentUser.value.username || "")) {
+      payload.username = nextUsername;
+    }
+
+    if (nextBio !== (currentUser.value.bio || null)) {
+      payload.bio = nextBio;
+    }
+
+    if (profileAvatarMode.value === "updated") {
+      payload.avatarBase64 = profileAvatarBase64.value;
+    } else if (profileAvatarMode.value === "removed") {
+      payload.avatarBase64 = null;
+    }
+
+    if (!Object.keys(payload).length) {
+      savingProfile.value = false;
+      profileError.value = "No hay cambios para guardar.";
+      return;
+    }
+
+    const response = await authStore.updateProfile(payload);
+    savingProfile.value = false;
+
+    if (!response.ok) {
+      profileError.value = response.error || "No fue posible guardar el perfil.";
+      return;
+    }
+
+    profileSuccess.value = "Perfil actualizado.";
+    profileModalOpen.value = false;
   }
 
   async function handleLogout() {
@@ -592,6 +789,8 @@ export function useDashboardView() {
     startFriendshipsRefreshLoop();
     window.addEventListener("focus", refreshFriendshipsInBackground);
     document.addEventListener("visibilitychange", refreshFriendshipsInBackground);
+    await nextTick();
+    scrollMessagesToBottom({ smooth: false });
   });
 
   onBeforeUnmount(() => {
@@ -630,19 +829,37 @@ export function useDashboardView() {
     loadingAuth,
     messageCount,
     onlineContacts,
+    onMessagesScroll,
     outgoingFriendRequests,
+    openProfileModal,
     pendingFriendActionId,
+    profileAvatarPreview,
+    profileBio,
+    profileError,
+    profileModalOpen,
+    profileName,
+    profileSuccess,
+    profileUsername,
     removingFriendId,
+    removeAvatarFromProfile,
     requestUsername,
     removeFriend,
     respondToFriendRequest,
+    saveProfileChanges,
+    savingProfile,
+    showScrollToLatest,
+    pendingMessagesBelow,
     selectConversation,
     sendFriendRequest,
     sendMessage,
     sendingFriendRequest,
     setFriendPanelTab,
+    handleAvatarInput,
     totalUnread,
     openDMWithFriend,
     loadDMs,
+    closeProfileModal,
+    messagesContainerRef,
+    jumpToLatestMessages,
   };
 }
