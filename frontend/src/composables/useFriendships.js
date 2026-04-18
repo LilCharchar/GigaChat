@@ -1,98 +1,177 @@
-// composables/useFriendships.js
-// Responsabilidad: lista de amigos, solicitudes entrantes/salientes,
-// envío de solicitudes, respuesta y eliminación de amigos.
-
 import { ref } from "vue";
+import { friendshipService } from "../services/friendshipService";
 
-/**
- * Gestiona toda la lógica social (amistades).
- */
+const FRIENDSHIPS_REFRESH_MS = 8000;
+
+function getInitials(name = "") {
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((chunk) => chunk[0])
+    .join("")
+    .toUpperCase();
+}
+
+function toAvatarDataUrl(base64) {
+  if (!base64) return "";
+  return `data:;base64,${base64}`;
+}
+
+function getFriendshipError(err) {
+  return err?.response?.data?.error || "No fue posible cargar amistades.";
+}
+
 export function useFriendships() {
   const friends = ref([]);
   const incomingFriendRequests = ref([]);
   const outgoingFriendRequests = ref([]);
-
-  const friendPanelTab = ref("requests"); // "requests" | "friends"
+  const friendPanelTab = ref("requests");
   const requestUsername = ref("");
-
   const loadingFriendships = ref(false);
   const sendingFriendRequest = ref(false);
-  const pendingFriendActionId = ref(null); // id del request en proceso
-  const removingFriendId = ref(null);
-  const friendshipError = ref(null);
+  const pendingFriendActionId = ref("");
+  const removingFriendId = ref("");
+  const friendshipError = ref("");
+  const friendshipsSyncing = ref(false);
 
-  function setFriendPanelTab(tab) {
-    friendPanelTab.value = tab;
+  let friendshipsRefreshTimer = null;
+
+  function normalizeIncomingRequests(payload = []) {
+    return payload.map((request) => ({
+      id: request.id,
+      username: request.requester_username,
+      name: request.requester_name || request.requester_username,
+      initials: getInitials(request.requester_name || request.requester_username),
+      avatarBase64: request.requester_avatar_base64 || null,
+      avatarUrl: toAvatarDataUrl(request.requester_avatar_base64),
+    }));
   }
 
-  // ── Carga ─────────────────────────────────────────────────────────────────
+  function normalizeOutgoingRequests(payload = []) {
+    return payload.map((request) => ({
+      id: request.id,
+      username: request.addressee_username,
+      name: request.addressee_name || request.addressee_username,
+      initials: getInitials(request.addressee_name || request.addressee_username),
+      avatarBase64: request.addressee_avatar_base64 || null,
+      avatarUrl: toAvatarDataUrl(request.addressee_avatar_base64),
+    }));
+  }
 
-  async function fetchFriendships() {
-    loadingFriendships.value = true;
-    friendshipError.value = null;
+  function normalizeFriends(payload = []) {
+    return payload.map((friend) => ({
+      user_id: friend.user_id,
+      username: friend.username,
+      name: friend.name || friend.username,
+      initials: getInitials(friend.name || friend.username),
+      avatarBase64: friend.avatar_base64 || null,
+      avatarUrl: toAvatarDataUrl(friend.avatar_base64),
+      online: true,
+    }));
+  }
+
+  async function loadFriendships({ silent = false } = {}) {
+    if (friendshipsSyncing.value) return;
+    friendshipsSyncing.value = true;
+
+    if (!silent) {
+      loadingFriendships.value = true;
+      friendshipError.value = "";
+    }
+
     try {
-      // TODO: llamar a la API
-      // const data = await friendshipService.getAll();
-      // friends.value = data.friends;
-      // incomingFriendRequests.value = data.incoming;
-      // outgoingFriendRequests.value = data.outgoing;
+      const [incomingResponse, outgoingResponse, friendsResponse] = await Promise.all([
+        friendshipService.incoming(),
+        friendshipService.outgoing(),
+        friendshipService.listFriends(),
+      ]);
+
+      incomingFriendRequests.value = normalizeIncomingRequests(
+        incomingResponse?.data?.requests ?? []
+      );
+      outgoingFriendRequests.value = normalizeOutgoingRequests(
+        outgoingResponse?.data?.requests ?? []
+      );
+      friends.value = normalizeFriends(friendsResponse?.data?.friends ?? []);
     } catch (err) {
-      friendshipError.value = err?.message ?? "Error al cargar amigos.";
+      if (!silent) {
+        friendshipError.value = getFriendshipError(err);
+      }
     } finally {
-      loadingFriendships.value = false;
+      if (!silent) loadingFriendships.value = false;
+      friendshipsSyncing.value = false;
     }
   }
 
-  // ── Acciones ──────────────────────────────────────────────────────────────
+  function refreshFriendshipsInBackground() {
+    if (document.visibilityState === "hidden") return;
+    loadFriendships({ silent: true });
+  }
+
+  function startFriendshipsRefreshLoop() {
+    if (friendshipsRefreshTimer) return;
+    friendshipsRefreshTimer = window.setInterval(
+      refreshFriendshipsInBackground,
+      FRIENDSHIPS_REFRESH_MS
+    );
+  }
+
+  function stopFriendshipsRefreshLoop() {
+    if (!friendshipsRefreshTimer) return;
+    window.clearInterval(friendshipsRefreshTimer);
+    friendshipsRefreshTimer = null;
+  }
 
   async function sendFriendRequest() {
-    const username = requestUsername.value.trim();
+    const username = requestUsername.value.trim().toLowerCase();
     if (!username) return;
+
     sendingFriendRequest.value = true;
-    friendshipError.value = null;
+    friendshipError.value = "";
+
     try {
-      // TODO: await friendshipService.sendRequest(username);
+      await friendshipService.sendRequest(username);
       requestUsername.value = "";
-      await fetchFriendships();
+      await loadFriendships();
     } catch (err) {
-      friendshipError.value = err?.message ?? "No se pudo enviar la solicitud.";
+      friendshipError.value = getFriendshipError(err);
     } finally {
       sendingFriendRequest.value = false;
     }
   }
 
-  /**
-   * @param {string} requestId
-   * @param {"accept"|"reject"} action
-   */
-  async function respondToFriendRequest(requestId, action) {
-    pendingFriendActionId.value = requestId;
-    friendshipError.value = null;
+  async function respondToFriendRequest(friendshipId, action) {
+    pendingFriendActionId.value = friendshipId;
+    friendshipError.value = "";
+
     try {
-      // TODO: await friendshipService.respond(requestId, action);
-      await fetchFriendships();
+      await friendshipService.respond(friendshipId, action);
+      await loadFriendships();
     } catch (err) {
-      friendshipError.value = err?.message ?? "No se pudo procesar la solicitud.";
+      friendshipError.value = getFriendshipError(err);
     } finally {
-      pendingFriendActionId.value = null;
+      pendingFriendActionId.value = "";
     }
   }
 
   async function removeFriend(userId) {
     removingFriendId.value = userId;
-    friendshipError.value = null;
+    friendshipError.value = "";
+
     try {
-      // TODO: await friendshipService.remove(userId);
-      friends.value = friends.value.filter((f) => f.user_id !== userId);
+      await friendshipService.removeFriend(userId);
+      await loadFriendships();
     } catch (err) {
-      friendshipError.value = err?.message ?? "No se pudo eliminar el amigo.";
+      friendshipError.value = getFriendshipError(err);
     } finally {
-      removingFriendId.value = null;
+      removingFriendId.value = "";
     }
   }
 
-  // Carga inicial
-  fetchFriendships();
+  function setFriendPanelTab(tab) {
+    friendPanelTab.value = tab;
+  }
 
   return {
     friends,
@@ -105,10 +184,13 @@ export function useFriendships() {
     removingFriendId,
     requestUsername,
     sendingFriendRequest,
-    fetchFriendships,
+    loadFriendships,
+    refreshFriendshipsInBackground,
     removeFriend,
     respondToFriendRequest,
     sendFriendRequest,
     setFriendPanelTab,
+    startFriendshipsRefreshLoop,
+    stopFriendshipsRefreshLoop,
   };
 }
