@@ -109,6 +109,8 @@ export function useDashboardView() {
     openDMWithFriend: chat.openDMWithFriend,
     selectConversation: chat.selectConversation,
     sendMessage: chat.sendMessage,
+    clearDM: chat.clearDM,
+    clearingDM: chat.clearingDM,
 
     // friendships
     activeRoster,

@@ -18,4 +18,8 @@ export const chatService = {
   openDMWithFriend(friendId) {
     return api.get(`/chats/dms/${encodeURIComponent(friendId)}`);
   },
+
+  clearDM(chatId) {
+    return api.delete(`/chats/dms/${encodeURIComponent(chatId)}/messages`);
+  },
 };

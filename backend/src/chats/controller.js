@@ -39,7 +39,7 @@ export async function getDMChats(req, res) {
   }
 }
 
-export async function openOrCreateDMWithFriend(req, res) {
+export async function openOrCreateDMWithFriend(req, res) {chatService
   try {
     const { friendId } = req.params;
 
@@ -49,6 +49,21 @@ export async function openOrCreateDMWithFriend(req, res) {
 
     const chat = await chatService.getOrCreateDMWithFriend(req.auth.id, friendId);
     res.json({ chat });
+  } catch (error) {
+    res.status(getStatus(error)).json({ error: error.message });
+  }
+}
+
+export async function clearDMChat(req, res) {
+  try {
+    const { chatId } = req.params;
+
+    if (!chatId) {
+      return res.status(400).json({ error: "chatId is required" });
+    }
+
+    await chatService.clearDMMessages({ chatId, userId: req.auth.id });
+    res.json({ ok: true });
   } catch (error) {
     res.status(getStatus(error)).json({ error: error.message });
   }

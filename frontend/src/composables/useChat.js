@@ -422,6 +422,35 @@ export function useChat({ currentUser }) {
     socketUnsubscribeDisconnect = null;
   }
 
+  // ── Limpiar DM ────────────────────────────────────────────────────────────
+
+  const clearingDM = ref(false);
+
+  async function clearDM(chatId) {
+    if (clearingDM.value) return;
+    clearingDM.value = true;
+    chatError.value = "";
+
+    try {
+      await chatService.clearDM(chatId);
+
+      // Limpiar mensajes localmente sin tocar la conversación ni el amigo
+      const conversation = dms.value.find((d) => d.id === chatId);
+      if (conversation) {
+        conversation.messages = [];
+        conversation.metrics[0].value = "0";
+        conversation.updatedAt = "Ahora";
+      }
+
+      showScrollToLatest.value = false;
+      pendingMessagesBelow.value = 0;
+    } catch (error) {
+      chatError.value = error?.response?.data?.error || error.message || "No fue posible limpiar el chat.";
+    } finally {
+      clearingDM.value = false;
+    }
+  }
+
   return {
     // state
     activeConversation,
@@ -445,6 +474,8 @@ export function useChat({ currentUser }) {
     totalUnread,
     // actions
     cleanupSocketListeners,
+    clearDM,
+    clearingDM,
     jumpToLatestMessages,
     loadDMs,
     loadGlobalChat,
