@@ -221,7 +221,8 @@
 .dv-hero {
   min-height: 14rem;
   display: flex;
-  align-items: center;
+  align-items: flex-end;
+  justify-content: space-between;
   padding: 1.2rem;
   border: 1px solid var(--dv-line);
   border-radius: 1.4rem;
@@ -271,6 +272,64 @@
   font-size: clamp(2.2rem, 5vw, 4rem);
   max-width: 7ch;
 }
+
+/* ── Botón limpiar DM ──────────────────────────────────────────────────────── */
+
+.dv-clear-dm {
+  position: relative;
+  z-index: 1;
+  align-self: flex-end;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2.4rem;
+  padding: 0 1rem;
+  border: 1px solid rgba(255, 100, 100, 0.22);
+  border-radius: 0.85rem;
+  background: rgba(255, 60, 60, 0.05);
+  color: #ff9f9f;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease,
+    color 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.15s ease;
+}
+
+.dv-clear-dm::before {
+  content: "✕";
+  font-size: 0.62rem;
+  opacity: 0.7;
+}
+
+.dv-clear-dm:hover {
+  background: rgba(255, 60, 60, 0.12);
+  border-color: rgba(255, 100, 100, 0.42);
+  color: #ffbdbd;
+  box-shadow: 0 0 14px rgba(255, 60, 60, 0.12);
+  transform: translateY(-1px);
+}
+
+.dv-clear-dm:active {
+  transform: translateY(0);
+  background: rgba(255, 60, 60, 0.18);
+  box-shadow: none;
+}
+
+.dv-clear-dm:disabled {
+  opacity: 0.38;
+  cursor: default;
+  transform: none;
+  box-shadow: none;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────── */
 
 .dv-friends {
   padding: 0.95rem;
@@ -792,5 +851,10 @@
   .dv-send,
   .dv-logout {
     width: 100%;
+  }
+
+  .dv-clear-dm {
+    width: 100%;
+    justify-content: center;
   }
 }
