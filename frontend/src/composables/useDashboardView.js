@@ -75,7 +75,7 @@ export function useDashboardView() {
     document.removeEventListener("visibilitychange", friendships.refreshFriendshipsInBackground);
   });
 
-  // ── Retorno (mismo contrato que el original) ──────────────────────────────
+  // ── Retorno ──────────────────────────────
 
   return {
     // auth
