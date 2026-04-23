@@ -18,13 +18,21 @@ export async function getChatMessages(req, res) {
     const { chatId } = req.params;
     const parsedLimit = Number(req.query.limit);
     const limit = Number.isFinite(parsedLimit) && parsedLimit > 0 ? parsedLimit : 50;
-    const messages = await chatService.listChatMessages({
+    const beforeCreatedAt =
+      typeof req.query.beforeCreatedAt === "string" && req.query.beforeCreatedAt.trim()
+        ? req.query.beforeCreatedAt.trim()
+        : null;
+    const beforeId =
+      typeof req.query.beforeId === "string" && req.query.beforeId.trim() ? req.query.beforeId.trim() : null;
+    const result = await chatService.listChatMessages({
       chatId,
       userId: req.auth.id,
       limit: Math.min(limit, 100),
+      beforeCreatedAt,
+      beforeId,
     });
 
-    res.json({ messages });
+    res.json(result);
   } catch (error) {
     res.status(getStatus(error)).json({ error: error.message });
   }

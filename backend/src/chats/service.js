@@ -8,15 +8,18 @@ function createHttpError(message, status) {
 
 export async function ensureUserIsActive(userId) {
   const result = await pool.query(
-    `SELECT id
+    `SELECT id, deleted_at, banned_at
      FROM users
-     WHERE id = $1
-       AND deleted_at IS NULL`,
+     WHERE id = $1`,
     [userId]
   );
 
-  if (result.rows.length === 0) {
+  if (result.rows.length === 0 || result.rows[0].deleted_at) {
     throw createHttpError("Unauthorized", 401);
+  }
+
+  if (result.rows[0].banned_at) {
+    throw createHttpError("Account banned", 403);
   }
 }
 
@@ -66,12 +69,14 @@ export async function getGlobalChatForUser(userId) {
   return result.rows[0];
 }
 
-export async function listChatMessages({ chatId, userId, limit = 50 }) {
+export async function listChatMessages({ chatId, userId, limit = 50, beforeCreatedAt = null, beforeId = null }) {
   const member = await isActiveMember(userId, chatId);
 
   if (!member) {
     throw createHttpError("Forbidden", 403);
   }
+
+  const hasCursor = Boolean(beforeCreatedAt && beforeId);
 
   const result = await pool.query(
     `SELECT cm.id,
@@ -89,12 +94,28 @@ export async function listChatMessages({ chatId, userId, limit = 50 }) {
      JOIN users u ON u.id = cm.sender_id
      WHERE cm.chat_id = $1
        AND cm.deleted_at IS NULL
-     ORDER BY cm.created_at DESC
-     LIMIT $2`,
-    [chatId, limit]
+       AND (
+         $3::boolean = FALSE
+         OR (cm.created_at, cm.id) < ($4::timestamptz, $5::uuid)
+       )
+      ORDER BY cm.created_at DESC
+      LIMIT $2`,
+    [chatId, limit, hasCursor, beforeCreatedAt, beforeId]
   );
 
-  return result.rows.reverse();
+  const ordered = result.rows.reverse();
+  const nextCursor = ordered.length
+    ? {
+        beforeCreatedAt: ordered[0].created_at,
+        beforeId: ordered[0].id,
+      }
+    : null;
+
+  return {
+    messages: ordered,
+    nextCursor,
+    hasMore: result.rows.length === limit,
+  };
 }
 
 export async function createMessage({ chatId, senderId, body, clientMessageId = null }) {

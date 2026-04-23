@@ -19,6 +19,12 @@ function mapUser(row) {
   };
 }
 
+function createHttpError(message, status) {
+  const error = new Error(message);
+  error.status = status;
+  return error;
+}
+
 export function getJwtSecret() {
   if (!process.env.JWT_SECRET) {
     throw new Error("Missing JWT_SECRET");
@@ -42,11 +48,12 @@ const register = async (data) => {
     return mapUser(result.rows[0]);
   } catch (error) {
     if (error.code === "23505") {
+      const constraint = error.constraint || "";
       const detail = error.detail || "";
-      if (detail.includes("email")) {
+      if (constraint.includes("email") || detail.includes("email")) {
         throw new Error("El email ya está registrado", { cause: error });
       }
-      if (detail.includes("username")) {
+      if (constraint.includes("username") || detail.includes("username")) {
         throw new Error("El username ya está en uso", { cause: error });
       }
     }
@@ -58,9 +65,12 @@ const login = async (data) => {
   const { email, password } = data;
 
   const result = await pool.query(
-    `SELECT id, name, username, email, bio, avatar, password_hash, created_at, updated_at
+    `SELECT id, name, username, email, bio, avatar, password_hash, deleted_at, banned_at, created_at, updated_at
      FROM users
-     WHERE email = $1`,
+     WHERE email = $1
+       AND deleted_at IS NULL
+     ORDER BY created_at DESC
+     LIMIT 1`,
     [email]
   );
 
@@ -69,6 +79,11 @@ const login = async (data) => {
   }
 
   const user = result.rows[0];
+
+  if (user.banned_at) {
+    throw createHttpError("Account banned", 403);
+  }
+
   const validPassword = await bcrypt.compare(password, user.password_hash);
 
   if (!validPassword) {
@@ -87,13 +102,13 @@ const login = async (data) => {
 
 const getCurrentUser = async (id) => {
   const result = await pool.query(
-    `SELECT id, name, username, email, bio, avatar, created_at, updated_at
+    `SELECT id, name, username, email, bio, avatar, deleted_at, created_at, updated_at
      FROM users
      WHERE id = $1`,
     [id]
   );
 
-  if (result.rows.length === 0) {
+  if (result.rows.length === 0 || result.rows[0].deleted_at) {
     throw new Error("User not found");
   }
 
@@ -138,6 +153,7 @@ const updateProfile = async (id, data) => {
       `UPDATE users
        SET ${assignments.join(", ")}
        WHERE id = $1
+         AND deleted_at IS NULL
        RETURNING id, name, username, email, bio, avatar, created_at, updated_at`,
       [id, ...values]
     );
@@ -149,8 +165,9 @@ const updateProfile = async (id, data) => {
     return mapUser(result.rows[0]);
   } catch (error) {
     if (error.code === "23505") {
+      const constraint = error.constraint || "";
       const detail = error.detail || "";
-      if (detail.includes("username")) {
+      if (constraint.includes("username") || detail.includes("username")) {
         throw new Error("El username ya está en uso", { cause: error });
       }
     }
@@ -159,4 +176,68 @@ const updateProfile = async (id, data) => {
   }
 };
 
-export default { register, login, getCurrentUser, updateProfile };
+const softDeleteAccount = async (id) => {
+  const result = await pool.query(
+    `UPDATE users
+     SET deleted_at = NOW(),
+         banned_at = NULL,
+         banned_reason = NULL,
+         banned_by = NULL
+     WHERE id = $1
+       AND deleted_at IS NULL
+     RETURNING id`,
+    [id]
+  );
+
+  if (result.rows.length === 0) {
+    throw createHttpError("User not found", 404);
+  }
+};
+
+const banUser = async ({ targetUserId, actorUserId, reason = null }) => {
+  if (targetUserId === actorUserId) {
+    throw createHttpError("You cannot ban yourself", 400);
+  }
+
+  const result = await pool.query(
+    `UPDATE users
+     SET banned_at = NOW(),
+         banned_reason = $3,
+         banned_by = $2
+     WHERE id = $1
+       AND deleted_at IS NULL
+     RETURNING id`,
+    [targetUserId, actorUserId, reason]
+  );
+
+  if (result.rows.length === 0) {
+    throw createHttpError("User not found", 404);
+  }
+};
+
+const unbanUser = async (targetUserId) => {
+  const result = await pool.query(
+    `UPDATE users
+     SET banned_at = NULL,
+         banned_reason = NULL,
+         banned_by = NULL
+     WHERE id = $1
+       AND deleted_at IS NULL
+     RETURNING id`,
+    [targetUserId]
+  );
+
+  if (result.rows.length === 0) {
+    throw createHttpError("User not found", 404);
+  }
+};
+
+export default {
+  register,
+  login,
+  getCurrentUser,
+  updateProfile,
+  softDeleteAccount,
+  banUser,
+  unbanUser,
+};
