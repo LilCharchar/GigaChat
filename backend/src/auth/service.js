@@ -1,6 +1,8 @@
 import pool from "../config/db.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import { getRealtimeServer } from "../realtime/index.js";
+import { userRoom } from "../realtime/rooms.js";
 
 const ACCESS_TOKEN_EXPIRES_IN = "1h";
 
@@ -13,6 +15,9 @@ function mapUser(row) {
     username: row.username,
     email: row.email,
     bio: row.bio,
+    role: row.role_name || null,
+    bannedAt: row.banned_at || null,
+    timedOutUntil: row.timed_out_until || null,
     avatarBase64,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -65,11 +70,24 @@ const login = async (data) => {
   const { email, password } = data;
 
   const result = await pool.query(
-    `SELECT id, name, username, email, bio, avatar, password_hash, deleted_at, banned_at, created_at, updated_at
+    `SELECT u.id,
+            u.name,
+            u.username,
+            u.email,
+            u.bio,
+            u.avatar,
+            u.password_hash,
+            u.deleted_at,
+            u.banned_at,
+            u.timed_out_until,
+            u.created_at,
+            u.updated_at,
+            r.name AS role_name
      FROM users
+     JOIN roles r ON r.id = u.role_id
      WHERE email = $1
-       AND deleted_at IS NULL
-     ORDER BY created_at DESC
+       AND u.deleted_at IS NULL
+     ORDER BY u.created_at DESC
      LIMIT 1`,
     [email]
   );
@@ -102,9 +120,21 @@ const login = async (data) => {
 
 const getCurrentUser = async (id) => {
   const result = await pool.query(
-    `SELECT id, name, username, email, bio, avatar, deleted_at, created_at, updated_at
-     FROM users
-     WHERE id = $1`,
+    `SELECT u.id,
+            u.name,
+            u.username,
+            u.email,
+            u.bio,
+            u.avatar,
+            u.deleted_at,
+            u.banned_at,
+            u.timed_out_until,
+            u.created_at,
+            u.updated_at,
+            r.name AS role_name
+     FROM users u
+     JOIN roles r ON r.id = u.role_id
+     WHERE u.id = $1`,
     [id]
   );
 
@@ -154,7 +184,17 @@ const updateProfile = async (id, data) => {
        SET ${assignments.join(", ")}
        WHERE id = $1
          AND deleted_at IS NULL
-       RETURNING id, name, username, email, bio, avatar, created_at, updated_at`,
+       RETURNING id,
+                 name,
+                 username,
+                 email,
+                 bio,
+                 avatar,
+                 banned_at,
+                 timed_out_until,
+                 created_at,
+                 updated_at,
+                 (SELECT name FROM roles WHERE id = users.role_id) AS role_name`,
       [id, ...values]
     );
 
@@ -255,6 +295,15 @@ const timeoutUser = async ({ targetUserId, actorUserId, minutes, reason = null }
     throw createHttpError("User not found", 404);
   }
 
+  const io = getRealtimeServer();
+  if (io) {
+    io.to(userRoom(targetUserId)).emit("account:timeout", {
+      userId: targetUserId,
+      timedOutUntil: result.rows[0].timed_out_until,
+      reason,
+    });
+  }
+
   return result.rows[0];
 };
 
@@ -272,6 +321,13 @@ const clearUserTimeout = async (targetUserId) => {
 
   if (result.rows.length === 0) {
     throw createHttpError("User not found", 404);
+  }
+
+  const io = getRealtimeServer();
+  if (io) {
+    io.to(userRoom(targetUserId)).emit("account:timeout-cleared", {
+      userId: targetUserId,
+    });
   }
 };
 

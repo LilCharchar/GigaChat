@@ -26,3 +26,12 @@ export const respondRequestBodySchema = z.object({
 export const removeFriendParamsSchema = z.object({
   userId: z.uuid(),
 });
+
+export const publicUserParamsSchema = z.object({
+  username: z
+    .string()
+    .min(3)
+    .max(30)
+    .transform((v) => v.trim().toLowerCase())
+    .refine(isValidUsernameFormat, "Invalid username format"),
+});

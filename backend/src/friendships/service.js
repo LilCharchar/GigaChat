@@ -216,6 +216,27 @@ const removeFriendship = async (currentUserId, targetUserId) => {
   }
 };
 
+const getPublicUserByUsername = async (username) => {
+  const result = await pool.query(
+    `SELECT id,
+            username,
+            name,
+            bio,
+            encode(avatar, 'base64') AS avatar_base64
+     FROM users
+     WHERE LOWER(username) = LOWER($1)
+       AND deleted_at IS NULL
+     LIMIT 1`,
+    [username]
+  );
+
+  if (result.rows.length === 0) {
+    throw createHttpError("User not found", 404);
+  }
+
+  return result.rows[0];
+};
+
 export default {
   sendRequest,
   listIncoming,
@@ -223,4 +244,5 @@ export default {
   respondRequest,
   listFriends,
   removeFriendship,
+  getPublicUserByUsername,
 };

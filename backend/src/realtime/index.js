@@ -3,6 +3,8 @@ import { authenticateSocket } from "./auth.js";
 import { joinUserRoom } from "./rooms.js";
 import { registerChatSocketHandlers } from "../chats/socket.handlers.js";
 
+let realtimeServer = null;
+
 export function initRealtime({ httpServer, frontendOrigin }) {
   const io = new Server(httpServer, {
     cors: {
@@ -18,5 +20,11 @@ export function initRealtime({ httpServer, frontendOrigin }) {
     registerChatSocketHandlers(io, socket);
   });
 
+  realtimeServer = io;
+
   return io;
+}
+
+export function getRealtimeServer() {
+  return realtimeServer;
 }
