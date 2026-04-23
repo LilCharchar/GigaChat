@@ -1,7 +1,18 @@
-import { registerSchema, loginSchema, updateProfileSchema } from "./schemas.js";
+import {
+  adminUserParamsSchema,
+  banUserBodySchema,
+  loginSchema,
+  registerSchema,
+  timeoutUserBodySchema,
+  updateProfileSchema,
+} from "./schemas.js";
 import authService from "./service.js";
 
 const ACCESS_COOKIE_NAME = "access_token";
+
+function getStatusCode(error, fallback) {
+  return Number(error?.status) || fallback;
+}
 
 function getCookieOptions() {
   const isProduction = process.env.NODE_ENV === "production";
@@ -31,7 +42,7 @@ const login = async (req, res) => {
     res.cookie(ACCESS_COOKIE_NAME, result.token, getCookieOptions());
     res.json({ user: result.user });
   } catch (error) {
-    res.status(401).json({ error: error.message });
+    res.status(getStatusCode(error, 401)).json({ error: error.message });
   }
 };
 
@@ -55,8 +66,95 @@ const updateProfile = async (req, res) => {
     const user = await authService.updateProfile(req.auth.id, data);
     res.json({ user });
   } catch (error) {
-    res.status(400).json({ error: error.message });
+    res.status(getStatusCode(error, 400)).json({ error: error.message });
   }
 };
 
-export default { register, login, logout, me, updateProfile };
+const deleteMe = async (req, res) => {
+  try {
+    await authService.softDeleteAccount(req.auth.id);
+    res.clearCookie(ACCESS_COOKIE_NAME, getCookieOptions());
+    res.status(204).send();
+  } catch (error) {
+    res.status(getStatusCode(error, 400)).json({ error: error.message });
+  }
+};
+
+const banUser = async (req, res) => {
+  try {
+    const { userId } = adminUserParamsSchema.parse(req.params);
+    const { reason } = banUserBodySchema.parse(req.body ?? {});
+
+    await authService.banUser({
+      targetUserId: userId,
+      actorUserId: req.auth.id,
+      reason: reason ?? null,
+    });
+
+    res.status(204).send();
+  } catch (error) {
+    res.status(getStatusCode(error, 400)).json({ error: error.message });
+  }
+};
+
+const unbanUser = async (req, res) => {
+  try {
+    const { userId } = adminUserParamsSchema.parse(req.params);
+    await authService.unbanUser(userId);
+    res.status(204).send();
+  } catch (error) {
+    res.status(getStatusCode(error, 400)).json({ error: error.message });
+  }
+};
+
+const timeoutUser = async (req, res) => {
+  try {
+    const { userId } = adminUserParamsSchema.parse(req.params);
+    const { minutes, reason } = timeoutUserBodySchema.parse(req.body ?? {});
+
+    const timeout = await authService.timeoutUser({
+      targetUserId: userId,
+      actorUserId: req.auth.id,
+      minutes,
+      reason: reason ?? null,
+    });
+
+    res.json({ timeoutUntil: timeout.timed_out_until });
+  } catch (error) {
+    res.status(getStatusCode(error, 400)).json({ error: error.message });
+  }
+};
+
+const clearUserTimeout = async (req, res) => {
+  try {
+    const { userId } = adminUserParamsSchema.parse(req.params);
+    await authService.clearUserTimeout(userId);
+    res.status(204).send();
+  } catch (error) {
+    res.status(getStatusCode(error, 400)).json({ error: error.message });
+  }
+};
+
+const getUser = async (req, res) => {
+  try {
+    const { userId } = adminUserParamsSchema.parse(req.params);
+    const user = await authService.getCurrentUser(userId);
+    res.json({ user });
+  } catch (error) {
+    res.status(getStatusCode(error, 404)).json({ error: error.message });
+  }
+};
+
+export default {
+  register,
+  login,
+  logout,
+  me,
+  updateProfile,
+  deleteMe,
+  banUser,
+  unbanUser,
+  timeoutUser,
+  clearUserTimeout,
+  getUser,
+};

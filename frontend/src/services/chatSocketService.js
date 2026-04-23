@@ -76,6 +76,14 @@ function sendMessage({ chatId, body, clientMessageId }) {
   return emitWithAck("message:send", { chatId, body, clientMessageId });
 }
 
+function editMessage({ messageId, body }) {
+  return emitWithAck("message:edit", { messageId, body });
+}
+
+function deleteMessage({ messageId }) {
+  return emitWithAck("message:delete", { messageId });
+}
+
 export const chatSocketService = {
   connect,
   disconnect,
@@ -83,4 +91,6 @@ export const chatSocketService = {
   subscribeChat,
   unsubscribeChat,
   sendMessage,
+  editMessage,
+  deleteMessage,
 };

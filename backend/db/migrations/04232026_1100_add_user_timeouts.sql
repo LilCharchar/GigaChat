@@ -1,0 +1,8 @@
+ALTER TABLE users
+  ADD COLUMN IF NOT EXISTS timed_out_until TIMESTAMPTZ DEFAULT NULL,
+  ADD COLUMN IF NOT EXISTS timed_out_reason TEXT DEFAULT NULL,
+  ADD COLUMN IF NOT EXISTS timed_out_by UUID DEFAULT NULL REFERENCES users(id) ON DELETE SET NULL;
+
+CREATE INDEX IF NOT EXISTS idx_users_timed_out_until
+  ON users (timed_out_until)
+  WHERE timed_out_until IS NOT NULL;

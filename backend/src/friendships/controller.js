@@ -1,5 +1,6 @@
 import friendshipService from "./service.js";
 import {
+  publicUserParamsSchema,
   sendRequestParamsSchema,
   removeFriendParamsSchema,
   respondRequestParamsSchema,
@@ -68,6 +69,16 @@ const removeFriendship = async (req, res) => {
   }
 };
 
+const getPublicUser = async (req, res) => {
+  try {
+    const { username } = publicUserParamsSchema.parse(req.params);
+    const user = await friendshipService.getPublicUserByUsername(username);
+    res.json({ user });
+  } catch (error) {
+    res.status(getStatusCode(error)).json({ error: error.message });
+  }
+};
+
 export default {
   sendRequest,
   listIncoming,
@@ -75,4 +86,5 @@ export default {
   respondRequest,
   listFriends,
   removeFriendship,
+  getPublicUser,
 };

@@ -1,4 +1,5 @@
 import pool from "../config/db.js";
+import { assertUserCanWrite } from "../auth/service.js";
 
 function createHttpError(message, status) {
   const error = new Error(message);
@@ -8,15 +9,18 @@ function createHttpError(message, status) {
 
 export async function ensureUserIsActive(userId) {
   const result = await pool.query(
-    `SELECT id
+    `SELECT id, deleted_at, banned_at
      FROM users
-     WHERE id = $1
-       AND deleted_at IS NULL`,
+     WHERE id = $1`,
     [userId]
   );
 
-  if (result.rows.length === 0) {
+  if (result.rows.length === 0 || result.rows[0].deleted_at) {
     throw createHttpError("Unauthorized", 401);
+  }
+
+  if (result.rows[0].banned_at) {
+    throw createHttpError("Account banned", 403);
   }
 }
 
@@ -36,13 +40,11 @@ export async function isActiveMember(userId, chatId) {
 }
 
 export async function isActiveParticipant(userId, chatId) {
-  // Primero intentar validar como miembro normal (para canales/globales)
   const isMember = await isActiveMember(userId, chatId);
   if (isMember) {
     return true;
   }
 
-  // Si no es miembro, validar si es un DM entre amigos
   return isDMChatBetweenFriends(userId, chatId);
 }
 
@@ -68,12 +70,20 @@ export async function getGlobalChatForUser(userId) {
   return result.rows[0];
 }
 
-export async function listChatMessages({ chatId, userId, limit = 50 }) {
+export async function listChatMessages({
+  chatId,
+  userId,
+  limit = 50,
+  beforeCreatedAt = null,
+  beforeId = null,
+}) {
   const member = await isActiveMember(userId, chatId);
 
   if (!member) {
     throw createHttpError("Forbidden", 403);
   }
+
+  const hasCursor = Boolean(beforeCreatedAt && beforeId);
 
   const result = await pool.query(
     `SELECT cm.id,
@@ -86,17 +96,34 @@ export async function listChatMessages({ chatId, userId, limit = 50 }) {
             cm.deleted_at,
             u.name AS sender_name,
             u.username AS sender_username,
+            u.bio AS sender_bio,
             encode(u.avatar, 'base64') AS sender_avatar_base64
      FROM chat_messages cm
      JOIN users u ON u.id = cm.sender_id
      WHERE cm.chat_id = $1
        AND cm.deleted_at IS NULL
-     ORDER BY cm.created_at DESC
-     LIMIT $2`,
-    [chatId, limit]
+       AND (
+         $3::boolean = FALSE
+         OR (cm.created_at, cm.id) < ($4::timestamptz, $5::uuid)
+       )
+      ORDER BY cm.created_at DESC
+      LIMIT $2`,
+    [chatId, limit, hasCursor, beforeCreatedAt, beforeId]
   );
 
-  return result.rows.reverse();
+  const ordered = result.rows.reverse();
+  const nextCursor = ordered.length
+    ? {
+        beforeCreatedAt: ordered[0].created_at,
+        beforeId: ordered[0].id,
+      }
+    : null;
+
+  return {
+    messages: ordered,
+    nextCursor,
+    hasMore: result.rows.length === limit,
+  };
 }
 
 export async function createMessage({ chatId, senderId, body, clientMessageId = null }) {
@@ -117,6 +144,7 @@ export async function createMessage({ chatId, senderId, body, clientMessageId = 
               i.deleted_at,
               u.name AS sender_name,
               u.username AS sender_username,
+              u.bio AS sender_bio,
               encode(u.avatar, 'base64') AS sender_avatar_base64
        FROM inserted i
        JOIN users u ON u.id = i.sender_id`,
@@ -137,6 +165,7 @@ export async function createMessage({ chatId, senderId, body, clientMessageId = 
             cm.deleted_at,
             u.name AS sender_name,
             u.username AS sender_username,
+            u.bio AS sender_bio,
             encode(u.avatar, 'base64') AS sender_avatar_base64
      FROM chat_messages cm
      JOIN users u ON u.id = cm.sender_id
@@ -168,6 +197,7 @@ export async function createMessage({ chatId, senderId, body, clientMessageId = 
               i.deleted_at,
               u.name AS sender_name,
               u.username AS sender_username,
+              u.bio AS sender_bio,
               encode(u.avatar, 'base64') AS sender_avatar_base64
        FROM inserted i
        JOIN users u ON u.id = i.sender_id`,
@@ -191,6 +221,7 @@ export async function createMessage({ chatId, senderId, body, clientMessageId = 
               cm.deleted_at,
               u.name AS sender_name,
               u.username AS sender_username,
+              u.bio AS sender_bio,
               encode(u.avatar, 'base64') AS sender_avatar_base64
        FROM chat_messages cm
        JOIN users u ON u.id = cm.sender_id
@@ -221,7 +252,6 @@ export async function getMessageById(messageId) {
 }
 
 export async function canModerateChat(userId, chatId) {
-  // Primero verificar si es propietario/admin de un chat de grupo/global
   const result = await pool.query(
     `SELECT cm.role
      FROM chat_members cm
@@ -235,9 +265,24 @@ export async function canModerateChat(userId, chatId) {
     return ["owner", "admin"].includes(result.rows[0].role);
   }
 
-  // Para DMs, el usuario siempre puede moderar sus propios mensajes (la validación específica se hace en socket.handlers)
-  // Aquí solo retornamos false porque los DMs no tienen "moderadores"
   return false;
+}
+
+export async function isGlobalChatAdmin(userId, chatId) {
+  const result = await pool.query(
+    `SELECT 1
+     FROM chats c
+     JOIN users u ON u.id = $1
+     WHERE c.id = $2
+       AND c.type = 'global'
+       AND c.is_active = TRUE
+       AND u.role_id = 1
+       AND u.deleted_at IS NULL
+     LIMIT 1`,
+    [userId, chatId]
+  );
+
+  return result.rows.length > 0;
 }
 
 export async function updateMessageBody(messageId, body) {
@@ -296,11 +341,9 @@ export async function getOrCreateDMWithFriend(userId, friendId) {
     throw createHttpError("User not found or not your friend", 404);
   }
 
-  // Asegurar que user1_id < user2_id para consistencia
   const user1_id = userId < friendId ? userId : friendId;
   const user2_id = userId < friendId ? friendId : userId;
 
-  // Buscar o crear el DM chat
   let result = await pool.query(
     `SELECT c.id, c.type, c.created_at, c.updated_at
      FROM chats c
@@ -315,7 +358,6 @@ export async function getOrCreateDMWithFriend(userId, friendId) {
     return result.rows[0];
   }
 
-  // Crear nuevo DM chat si no existe
   const insertResult = await pool.query(
     `INSERT INTO chats (type, dm_user1_id, dm_user2_id, is_active)
      VALUES ('dm', $1, $2, TRUE)
@@ -325,7 +367,6 @@ export async function getOrCreateDMWithFriend(userId, friendId) {
 
   const newChat = insertResult.rows[0];
 
-  // Agregar ambos usuarios como miembros
   await pool.query(
     `INSERT INTO chat_members (chat_id, user_id, role, left_at)
      VALUES ($1, $2, 'member', NULL), ($1, $3, 'member', NULL)
@@ -391,4 +432,34 @@ export async function isDMChatBetweenFriends(userId, chatId) {
   return result.rows.length > 0;
 }
 
-export { createHttpError };
+export async function clearDMMessages({ chatId, userId }) {
+  await assertUserCanWrite(userId);
+
+  // Verificar que el chat existe, es un DM y el usuario es participante
+  const result = await pool.query(
+    `SELECT c.id
+     FROM chats c
+     JOIN chat_members cm ON cm.chat_id = c.id
+     WHERE c.id = $1
+       AND c.type = 'dm'
+       AND c.is_active = TRUE
+       AND cm.user_id = $2
+       AND cm.left_at IS NULL`,
+    [chatId, userId]
+  );
+
+  if (result.rows.length === 0) {
+    throw createHttpError("Forbidden", 403);
+  }
+
+  // Soft-delete de todos los mensajes activos del DM
+  await pool.query(
+    `UPDATE chat_messages
+     SET deleted_at = NOW()
+     WHERE chat_id = $1
+       AND deleted_at IS NULL`,
+    [chatId]
+  );
+}
+
+export { createHttpError, assertUserCanWrite };

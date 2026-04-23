@@ -38,3 +38,16 @@ export const updateProfileSchema = z
   .refine((data) => Object.keys(data).length > 0, {
     message: "No fields to update",
   });
+
+export const adminUserParamsSchema = z.object({
+  userId: z.uuid(),
+});
+
+export const banUserBodySchema = z.object({
+  reason: z.string().trim().min(1).max(500).optional(),
+});
+
+export const timeoutUserBodySchema = z.object({
+  minutes: z.int().min(1).max(43200),
+  reason: z.string().trim().min(1).max(500).optional(),
+});
