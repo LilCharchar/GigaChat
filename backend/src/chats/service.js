@@ -451,4 +451,4 @@ export async function clearDMMessages({ chatId, userId }) {
   );
 }
 
-export { createHttpError };
+export { createHttpError, assertUserCanWrite };

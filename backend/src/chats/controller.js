@@ -47,7 +47,7 @@ export async function getDMChats(req, res) {
   }
 }
 
-export async function openOrCreateDMWithFriend(req, res) {chatService
+export async function openOrCreateDMWithFriend(req, res) {
   try {
     const { friendId } = req.params;
 
