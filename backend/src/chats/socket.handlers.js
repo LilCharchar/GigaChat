@@ -5,9 +5,11 @@ import {
   ensureUserIsActive,
   getMessageById,
   isActiveParticipant,
+  isGlobalChatAdmin,
   softDeleteMessage,
   updateMessageBody,
 } from "./service.js";
+import { assertUserCanWrite } from "../auth/service.js";
 import { chatRoom, joinChatRoom, leaveChatRoom } from "../realtime/rooms.js";
 
 const MAX_MESSAGE_LENGTH = 4000;
@@ -107,6 +109,7 @@ export function registerChatSocketHandlers(io, socket) {
   socket.on("message:send", async (payload = {}, ack) => {
     try {
       await ensureUserIsActive(socket.user.id);
+      await assertUserCanWrite(socket.user.id);
       const { chatId } = payload;
       const body = normalizeBody(payload.body);
       const clientMessageId =
@@ -144,6 +147,7 @@ export function registerChatSocketHandlers(io, socket) {
   socket.on("message:edit", async (payload = {}, ack) => {
     try {
       await ensureUserIsActive(socket.user.id);
+      await assertUserCanWrite(socket.user.id);
       const { messageId } = payload;
       const body = normalizeBody(payload.body);
 
@@ -159,8 +163,9 @@ export function registerChatSocketHandlers(io, socket) {
 
       const isSender = existing.sender_id === socket.user.id;
       const isModerator = await canModerateChat(socket.user.id, existing.chat_id);
+      const isGlobalAdmin = await isGlobalChatAdmin(socket.user.id, existing.chat_id);
 
-      if (!isSender && !isModerator) {
+      if (!isSender && !isModerator && !isGlobalAdmin) {
         throw createHttpError("Forbidden", 403);
       }
 
@@ -176,6 +181,7 @@ export function registerChatSocketHandlers(io, socket) {
   socket.on("message:delete", async (payload = {}, ack) => {
     try {
       await ensureUserIsActive(socket.user.id);
+      await assertUserCanWrite(socket.user.id);
       const { messageId } = payload;
 
       if (!messageId) {
@@ -190,8 +196,9 @@ export function registerChatSocketHandlers(io, socket) {
 
       const isSender = existing.sender_id === socket.user.id;
       const isModerator = await canModerateChat(socket.user.id, existing.chat_id);
+      const isGlobalAdmin = await isGlobalChatAdmin(socket.user.id, existing.chat_id);
 
-      if (!isSender && !isModerator) {
+      if (!isSender && !isModerator && !isGlobalAdmin) {
         throw createHttpError("Forbidden", 403);
       }
 

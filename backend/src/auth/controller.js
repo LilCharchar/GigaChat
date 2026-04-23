@@ -3,6 +3,7 @@ import {
   banUserBodySchema,
   loginSchema,
   registerSchema,
+  timeoutUserBodySchema,
   updateProfileSchema,
 } from "./schemas.js";
 import authService from "./service.js";
@@ -106,4 +107,43 @@ const unbanUser = async (req, res) => {
   }
 };
 
-export default { register, login, logout, me, updateProfile, deleteMe, banUser, unbanUser };
+const timeoutUser = async (req, res) => {
+  try {
+    const { userId } = adminUserParamsSchema.parse(req.params);
+    const { minutes, reason } = timeoutUserBodySchema.parse(req.body ?? {});
+
+    const timeout = await authService.timeoutUser({
+      targetUserId: userId,
+      actorUserId: req.auth.id,
+      minutes,
+      reason: reason ?? null,
+    });
+
+    res.json({ timeoutUntil: timeout.timed_out_until });
+  } catch (error) {
+    res.status(getStatusCode(error, 400)).json({ error: error.message });
+  }
+};
+
+const clearUserTimeout = async (req, res) => {
+  try {
+    const { userId } = adminUserParamsSchema.parse(req.params);
+    await authService.clearUserTimeout(userId);
+    res.status(204).send();
+  } catch (error) {
+    res.status(getStatusCode(error, 400)).json({ error: error.message });
+  }
+};
+
+export default {
+  register,
+  login,
+  logout,
+  me,
+  updateProfile,
+  deleteMe,
+  banUser,
+  unbanUser,
+  timeoutUser,
+  clearUserTimeout,
+};

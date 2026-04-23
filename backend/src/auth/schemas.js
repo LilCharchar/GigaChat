@@ -46,3 +46,8 @@ export const adminUserParamsSchema = z.object({
 export const banUserBodySchema = z.object({
   reason: z.string().trim().min(1).max(500).optional(),
 });
+
+export const timeoutUserBodySchema = z.object({
+  minutes: z.int().min(1).max(43200),
+  reason: z.string().trim().min(1).max(500).optional(),
+});

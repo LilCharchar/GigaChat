@@ -182,7 +182,10 @@ const softDeleteAccount = async (id) => {
      SET deleted_at = NOW(),
          banned_at = NULL,
          banned_reason = NULL,
-         banned_by = NULL
+         banned_by = NULL,
+         timed_out_until = NULL,
+         timed_out_reason = NULL,
+         timed_out_by = NULL
      WHERE id = $1
        AND deleted_at IS NULL
      RETURNING id`,
@@ -232,6 +235,68 @@ const unbanUser = async (targetUserId) => {
   }
 };
 
+const timeoutUser = async ({ targetUserId, actorUserId, minutes, reason = null }) => {
+  if (targetUserId === actorUserId) {
+    throw createHttpError("You cannot timeout yourself", 400);
+  }
+
+  const result = await pool.query(
+    `UPDATE users
+     SET timed_out_until = NOW() + ($3::text || ' minutes')::interval,
+         timed_out_reason = $4,
+         timed_out_by = $2
+     WHERE id = $1
+       AND deleted_at IS NULL
+     RETURNING id, timed_out_until`,
+    [targetUserId, actorUserId, String(minutes), reason]
+  );
+
+  if (result.rows.length === 0) {
+    throw createHttpError("User not found", 404);
+  }
+
+  return result.rows[0];
+};
+
+const clearUserTimeout = async (targetUserId) => {
+  const result = await pool.query(
+    `UPDATE users
+     SET timed_out_until = NULL,
+         timed_out_reason = NULL,
+         timed_out_by = NULL
+     WHERE id = $1
+       AND deleted_at IS NULL
+     RETURNING id`,
+    [targetUserId]
+  );
+
+  if (result.rows.length === 0) {
+    throw createHttpError("User not found", 404);
+  }
+};
+
+export async function assertUserCanWrite(userId) {
+  const result = await pool.query(
+    `SELECT deleted_at, banned_at, timed_out_until
+     FROM users
+     WHERE id = $1
+     LIMIT 1`,
+    [userId]
+  );
+
+  if (result.rows.length === 0 || result.rows[0].deleted_at) {
+    throw createHttpError("Unauthorized", 401);
+  }
+
+  if (result.rows[0].banned_at) {
+    throw createHttpError("Account banned", 403);
+  }
+
+  if (result.rows[0].timed_out_until && new Date(result.rows[0].timed_out_until) > new Date()) {
+    throw createHttpError("Account timed out", 403);
+  }
+}
+
 export default {
   register,
   login,
@@ -240,4 +305,6 @@ export default {
   softDeleteAccount,
   banUser,
   unbanUser,
+  timeoutUser,
+  clearUserTimeout,
 };

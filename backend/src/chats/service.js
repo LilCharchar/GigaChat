@@ -1,4 +1,5 @@
 import pool from "../config/db.js";
+import { assertUserCanWrite } from "../auth/service.js";
 
 function createHttpError(message, status) {
   const error = new Error(message);
@@ -256,6 +257,23 @@ export async function canModerateChat(userId, chatId) {
   return false;
 }
 
+export async function isGlobalChatAdmin(userId, chatId) {
+  const result = await pool.query(
+    `SELECT 1
+     FROM chats c
+     JOIN users u ON u.id = $1
+     WHERE c.id = $2
+       AND c.type = 'global'
+       AND c.is_active = TRUE
+       AND u.role_id = 1
+       AND u.deleted_at IS NULL
+     LIMIT 1`,
+    [userId, chatId]
+  );
+
+  return result.rows.length > 0;
+}
+
 export async function updateMessageBody(messageId, body) {
   const result = await pool.query(
     `UPDATE chat_messages
@@ -404,6 +422,8 @@ export async function isDMChatBetweenFriends(userId, chatId) {
 }
 
 export async function clearDMMessages({ chatId, userId }) {
+  await assertUserCanWrite(userId);
+
   // Verificar que el chat existe, es un DM y el usuario es participante
   const result = await pool.query(
     `SELECT c.id

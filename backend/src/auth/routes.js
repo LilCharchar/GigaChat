@@ -12,5 +12,12 @@ router.patch("/me/profile", requireAuth, authController.updateProfile);
 router.delete("/me", requireAuth, authController.deleteMe);
 router.post("/admin/users/:userId/ban", requireAuth, requireAdmin, authController.banUser);
 router.post("/admin/users/:userId/unban", requireAuth, requireAdmin, authController.unbanUser);
+router.post("/admin/users/:userId/timeout", requireAuth, requireAdmin, authController.timeoutUser);
+router.post(
+  "/admin/users/:userId/timeout/clear",
+  requireAuth,
+  requireAdmin,
+  authController.clearUserTimeout
+);
 
 export default router;
