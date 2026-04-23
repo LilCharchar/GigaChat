@@ -19,6 +19,14 @@ defineProps({
     type: Number,
     default: 0,
   },
+  isUserTimedOut: {
+    type: Boolean,
+    default: false,
+  },
+  timeoutRemainingLabel: {
+    type: String,
+    default: "",
+  },
   messagesContainerRef: {
     type: Object,
     default: null,
@@ -133,11 +141,23 @@ const emit = defineEmits([
         :value="draft"
         class="dv-input"
         rows="1"
-        placeholder="Escribe un mensaje"
+        :disabled="isUserTimedOut"
+        :placeholder="
+          isUserTimedOut
+            ? timeoutRemainingLabel
+              ? `Timeout activo (${timeoutRemainingLabel})`
+              : 'Timeout activo'
+            : 'Escribe un mensaje'
+        "
         @input="emit('update:draft', $event.target.value)"
         @keydown.enter.exact.prevent="emit('send-message')"
       ></textarea>
-      <button class="dv-send" type="submit">Enviar</button>
+      <button class="dv-send" type="submit" :disabled="isUserTimedOut">Enviar</button>
     </form>
+
+    <p v-if="isUserTimedOut" class="dv-social-error">
+      No puedes enviar mensajes por timeout
+      <span v-if="timeoutRemainingLabel"> ({{ timeoutRemainingLabel }})</span>.
+    </p>
   </section>
 </template>

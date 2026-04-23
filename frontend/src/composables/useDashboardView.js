@@ -116,6 +116,8 @@ export function useDashboardView() {
     openDMWithFriend: chat.openDMWithFriend,
     selectConversation: chat.selectConversation,
     sendMessage: chat.sendMessage,
+    isUserTimedOut: chat.isUserTimedOut,
+    timeoutRemainingLabel: chat.timeoutRemainingLabel,
     startEditingMessage: chat.startEditingMessage,
     saveEditingMessage: chat.saveEditingMessage,
     deleteMessage: chat.deleteMessage,

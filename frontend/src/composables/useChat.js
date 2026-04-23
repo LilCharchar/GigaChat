@@ -1,4 +1,4 @@
-import { computed, nextTick, ref } from "vue";
+import { computed, nextTick, ref, watch } from "vue";
 import { authService } from "../services/authService";
 import { chatService } from "../services/chatService";
 import { chatSocketService } from "../services/chatSocketService";
@@ -106,13 +106,26 @@ export function useChat({ currentUser }) {
     error: "",
     isAdmin: false,
   });
+  const timedOutUntil = ref(null);
+  const timeoutNowMs = ref(Date.now());
 
   let socketUnsubscribeMessageNew = null;
   let socketUnsubscribeMessageUpdated = null;
   let socketUnsubscribeMessageDeleted = null;
+  let socketUnsubscribeAccountTimeout = null;
+  let socketUnsubscribeAccountTimeoutCleared = null;
   let socketUnsubscribeConnect = null;
   let socketUnsubscribeDisconnect = null;
+  let timeoutTickIntervalId = null;
   let userPopoverRequestId = 0;
+
+  watch(
+    () => currentUser.value?.timedOutUntil,
+    (value) => {
+      timedOutUntil.value = value || null;
+    },
+    { immediate: true }
+  );
 
   const activeConversation = computed(
     () =>
@@ -140,6 +153,21 @@ export function useChat({ currentUser }) {
   const totalUnread = computed(() => conversations.value.reduce((sum, c) => sum + c.unread, 0));
   const onlineContacts = computed(() => conversations.value.length);
   const messageCount = computed(() => activeConversation.value?.messages?.length ?? 0);
+  const isUserTimedOut = computed(() => {
+    if (!timedOutUntil.value) return false;
+    const untilMs = new Date(timedOutUntil.value).getTime();
+    if (Number.isNaN(untilMs)) return false;
+    return untilMs > timeoutNowMs.value;
+  });
+  const timeoutRemainingLabel = computed(() => {
+    if (!isUserTimedOut.value) return "";
+    const untilMs = new Date(timedOutUntil.value).getTime();
+    const remainingMs = Math.max(0, untilMs - timeoutNowMs.value);
+    const totalSeconds = Math.ceil(remainingMs / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${minutes}:${String(seconds).padStart(2, "0")}`;
+  });
 
   // ── Scroll ────────────────────────────────────────────────────────────────
 
@@ -651,6 +679,13 @@ export function useChat({ currentUser }) {
   }
 
   async function sendMessage() {
+    if (isUserTimedOut.value) {
+      chatError.value = timeoutRemainingLabel.value
+        ? `No puedes enviar mensajes por timeout (${timeoutRemainingLabel.value}).`
+        : "No puedes enviar mensajes por timeout.";
+      return;
+    }
+
     const message = draft.value.trim();
     if (!message || !activeConversation.value) return;
 
@@ -709,6 +744,12 @@ export function useChat({ currentUser }) {
   }
 
   function setupSocketListeners() {
+    if (!timeoutTickIntervalId) {
+      timeoutTickIntervalId = window.setInterval(() => {
+        timeoutNowMs.value = Date.now();
+      }, 1000);
+    }
+
     socketUnsubscribeConnect = chatSocketService.on("connect", () => {
       socketConnected.value = true;
       subscribeActiveConversation().catch(() => {});
@@ -784,6 +825,16 @@ export function useChat({ currentUser }) {
         clearDeleteMessageState();
       }
     });
+
+    socketUnsubscribeAccountTimeout = chatSocketService.on("account:timeout", (payload = {}) => {
+      timedOutUntil.value = payload.timedOutUntil || timedOutUntil.value;
+      timeoutNowMs.value = Date.now();
+    });
+
+    socketUnsubscribeAccountTimeoutCleared = chatSocketService.on("account:timeout-cleared", () => {
+      timedOutUntil.value = null;
+      timeoutNowMs.value = Date.now();
+    });
   }
 
   function cleanupSocketListeners() {
@@ -793,10 +844,19 @@ export function useChat({ currentUser }) {
     socketUnsubscribeMessageUpdated = null;
     socketUnsubscribeMessageDeleted?.();
     socketUnsubscribeMessageDeleted = null;
+    socketUnsubscribeAccountTimeout?.();
+    socketUnsubscribeAccountTimeout = null;
+    socketUnsubscribeAccountTimeoutCleared?.();
+    socketUnsubscribeAccountTimeoutCleared = null;
     socketUnsubscribeConnect?.();
     socketUnsubscribeConnect = null;
     socketUnsubscribeDisconnect?.();
     socketUnsubscribeDisconnect = null;
+
+    if (timeoutTickIntervalId) {
+      window.clearInterval(timeoutTickIntervalId);
+      timeoutTickIntervalId = null;
+    }
   }
 
   // ── Limpiar DM ────────────────────────────────────────────────────────────
@@ -860,6 +920,8 @@ export function useChat({ currentUser }) {
     pendingMessagesBelow,
     openUserPopover,
     isCurrentUserAdmin,
+    isUserTimedOut,
+    timeoutRemainingLabel,
     saveEditingMessage,
     startEditingMessage,
     timeoutUserFromPopover,

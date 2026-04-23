@@ -25,8 +25,6 @@ const {
   socketConnected,
   selectConversation,
   openDMWithFriend,
-  clearDM,
-  clearingDM,
 
   editingMessageId,
   editingMessageText,
@@ -52,6 +50,8 @@ const {
   sendMessage,
   jumpToLatestMessages,
   onMessagesScroll,
+  isUserTimedOut,
+  timeoutRemainingLabel,
 
   // amistades
   friends,
@@ -110,10 +110,7 @@ const {
         <HeroHeader
           :conversation-name="activeConversation?.name || 'Global'"
           :conversation-type="activeConversation?.type || ''"
-          :conversation-id="activeConversation?.id || ''"
           :socket-connected="socketConnected"
-          :clearing-d-m="clearingDM"
-          @clear-dm="clearDM"
         />
 
         <FriendsPanel
@@ -144,6 +141,8 @@ const {
         :messages-container-ref="messagesContainerRef"
         :show-scroll-to-latest="showScrollToLatest"
         :pending-messages-below="pendingMessagesBelow"
+        :is-user-timed-out="isUserTimedOut"
+        :timeout-remaining-label="timeoutRemainingLabel"
         :current-user-id="currentUser?.id || ''"
         :current-user-role="currentUser?.role || ''"
         :active-conversation-type="activeConversation?.type || 'channel'"
