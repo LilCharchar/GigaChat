@@ -633,6 +633,152 @@
   border-radius: 1rem;
   background: rgba(18, 18, 18, 0.9);
   border: 1px solid rgba(255, 255, 255, 0.06);
+  min-width: 0;
+}
+
+.dv-message-mark-button,
+.dv-message-author-button,
+.dv-message-action-btn,
+.dv-request-btn,
+.dv-modal-close,
+.dv-clear-dm,
+.dv-room,
+.dv-user,
+.dv-social-tab,
+.dv-friend-send {
+  cursor: pointer;
+}
+
+.dv-message-mark-button,
+.dv-message-author-button,
+.dv-message-action-btn {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  padding: 0;
+}
+
+.dv-message-mark-button {
+  align-self: flex-start;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.dv-message-mark-button .dv-message-avatar {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 999px;
+}
+
+.dv-message-mark-button:focus-visible,
+.dv-message-author-button:focus-visible,
+.dv-message-action-btn:focus-visible,
+.dv-request-btn:focus-visible,
+.dv-modal-close:focus-visible,
+.dv-social-tab:focus-visible,
+.dv-friend-send:focus-visible,
+.dv-clear-dm:focus-visible,
+.dv-room:focus-visible,
+.dv-user:focus-visible {
+  outline: 2px solid rgba(208, 255, 47, 0.55);
+  outline-offset: 2px;
+}
+
+.dv-message-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.8rem;
+}
+
+.dv-message-author-button {
+  text-align: left;
+  min-width: 0;
+}
+
+.dv-message-author-button span {
+  display: block;
+  margin-top: 0.15rem;
+  color: var(--dv-muted);
+  font-size: 0.74rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dv-message-meta {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+  text-align: right;
+}
+
+.dv-message-meta time,
+.dv-message-edited {
+  color: var(--dv-muted);
+  font-size: 0.7rem;
+  letter-spacing: 0.03em;
+}
+
+.dv-message-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.dv-message-delete-confirm-label {
+  color: #ff9f9f;
+  font-size: 0.66rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.dv-message-action-btn {
+  min-height: 1.7rem;
+  padding: 0 0.55rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0.6rem;
+  color: var(--dv-text);
+  font-size: 0.64rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.dv-message-action-btn.is-danger {
+  border-color: rgba(255, 124, 124, 0.28);
+  color: #ff9f9f;
+}
+
+.dv-message-editor {
+  margin-top: 0.7rem;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.dv-message-edit-input {
+  min-height: 6rem;
+}
+
+.dv-message-edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.dv-message p {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  white-space: pre-wrap;
 }
 
 .dv-message.is-own .dv-message-mark {
@@ -797,6 +943,120 @@
 .dv-modal-save {
   min-height: 2.3rem;
   min-width: 7rem;
+}
+
+.dv-user-popover-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 35;
+}
+
+.dv-user-popover {
+  position: fixed;
+  width: min(20rem, calc(100vw - 2rem));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1rem;
+  background: linear-gradient(180deg, rgba(12, 12, 12, 0.98), rgba(8, 8, 8, 0.98));
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.42);
+  padding: 0.95rem;
+}
+
+.dv-user-popover-head {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.dv-user-popover-avatar {
+  width: 3.2rem;
+  height: 3.2rem;
+  border-radius: 999px;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  background: rgba(208, 255, 47, 0.12);
+  color: var(--dv-accent);
+  font-weight: 800;
+}
+
+.dv-user-popover-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.dv-user-popover-copy {
+  min-width: 0;
+}
+
+.dv-user-popover-copy strong,
+.dv-user-popover-copy p {
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dv-user-popover-copy p {
+  color: var(--dv-muted);
+  font-size: 0.78rem;
+  margin-top: 0.15rem;
+}
+
+.dv-user-popover-meta {
+  margin: 0.75rem 0 0;
+  display: flex;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+  color: var(--dv-muted);
+  font-size: 0.72rem;
+}
+
+.dv-user-popover-meta span {
+  padding: 0.2rem 0.45rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.dv-user-popover-bio {
+  margin: 0.75rem 0 0;
+  color: var(--dv-text);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.dv-user-popover-bio.is-muted {
+  color: var(--dv-muted);
+}
+
+.dv-user-popover-admin {
+  margin-top: 0.9rem;
+  display: grid;
+  gap: 0.7rem;
+}
+
+.dv-user-popover-admin label {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.dv-user-popover-admin span {
+  color: var(--dv-muted);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.dv-user-popover-textarea {
+  min-height: 4.2rem;
+}
+
+.dv-user-popover-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: flex-end;
 }
 
 @media (max-width: 1040px) {

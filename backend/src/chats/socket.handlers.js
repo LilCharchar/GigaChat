@@ -58,6 +58,7 @@ function formatMessage(message) {
     senderId: message.sender_id,
     senderName: message.sender_name,
     senderUsername: message.sender_username,
+    senderBio: message.sender_bio,
     senderAvatarBase64: message.sender_avatar_base64,
     body: message.body,
     clientMessageId: message.client_message_id,

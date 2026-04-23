@@ -70,7 +70,13 @@ export async function getGlobalChatForUser(userId) {
   return result.rows[0];
 }
 
-export async function listChatMessages({ chatId, userId, limit = 50, beforeCreatedAt = null, beforeId = null }) {
+export async function listChatMessages({
+  chatId,
+  userId,
+  limit = 50,
+  beforeCreatedAt = null,
+  beforeId = null,
+}) {
   const member = await isActiveMember(userId, chatId);
 
   if (!member) {
@@ -90,6 +96,7 @@ export async function listChatMessages({ chatId, userId, limit = 50, beforeCreat
             cm.deleted_at,
             u.name AS sender_name,
             u.username AS sender_username,
+            u.bio AS sender_bio,
             encode(u.avatar, 'base64') AS sender_avatar_base64
      FROM chat_messages cm
      JOIN users u ON u.id = cm.sender_id
@@ -137,6 +144,7 @@ export async function createMessage({ chatId, senderId, body, clientMessageId = 
               i.deleted_at,
               u.name AS sender_name,
               u.username AS sender_username,
+              u.bio AS sender_bio,
               encode(u.avatar, 'base64') AS sender_avatar_base64
        FROM inserted i
        JOIN users u ON u.id = i.sender_id`,
@@ -157,6 +165,7 @@ export async function createMessage({ chatId, senderId, body, clientMessageId = 
             cm.deleted_at,
             u.name AS sender_name,
             u.username AS sender_username,
+            u.bio AS sender_bio,
             encode(u.avatar, 'base64') AS sender_avatar_base64
      FROM chat_messages cm
      JOIN users u ON u.id = cm.sender_id
@@ -188,6 +197,7 @@ export async function createMessage({ chatId, senderId, body, clientMessageId = 
               i.deleted_at,
               u.name AS sender_name,
               u.username AS sender_username,
+              u.bio AS sender_bio,
               encode(u.avatar, 'base64') AS sender_avatar_base64
        FROM inserted i
        JOIN users u ON u.id = i.sender_id`,
@@ -211,6 +221,7 @@ export async function createMessage({ chatId, senderId, body, clientMessageId = 
               cm.deleted_at,
               u.name AS sender_name,
               u.username AS sender_username,
+              u.bio AS sender_bio,
               encode(u.avatar, 'base64') AS sender_avatar_base64
        FROM chat_messages cm
        JOIN users u ON u.id = cm.sender_id

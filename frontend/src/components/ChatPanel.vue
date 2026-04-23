@@ -1,5 +1,6 @@
 <script setup>
 import ChatMessage from "./ChatMessage.vue";
+import UserInfoPopover from "./UserInfoPopover.vue";
 
 defineProps({
   messages: {
@@ -22,6 +23,38 @@ defineProps({
     type: Object,
     default: null,
   },
+  bindMessagesContainerRef: {
+    type: Function,
+    default: null,
+  },
+  currentUserId: {
+    type: String,
+    default: "",
+  },
+  currentUserRole: {
+    type: String,
+    default: "",
+  },
+  activeConversationType: {
+    type: String,
+    default: "channel",
+  },
+  editingMessageId: {
+    type: String,
+    default: "",
+  },
+  editingMessageText: {
+    type: String,
+    default: "",
+  },
+  deletingMessageId: {
+    type: String,
+    default: "",
+  },
+  userPopover: {
+    type: Object,
+    default: () => ({ visible: false }),
+  },
 });
 
 const emit = defineEmits([
@@ -29,25 +62,61 @@ const emit = defineEmits([
   "send-message",
   "jump-to-latest",
   "messages-scroll",
+  "user-click",
+  "start-edit-message",
+  "delete-message",
+  "confirm-delete-message",
+  "cancel-delete-message",
+  "update:editing-message-text",
+  "save-edit-message",
+  "cancel-edit-message",
+  "close-user-popover",
+  "timeout-user",
+  "ban-user",
 ]);
 </script>
 
 <template>
   <section class="dv-chat">
     <div
-      ref="messagesContainerRef"
+      :ref="bindMessagesContainerRef || messagesContainerRef"
       class="dv-messages"
       @scroll="emit('messages-scroll')"
     >
-      <p v-if="!messages.length" class="dv-social-empty">
-        Aun no hay mensajes en este chat.
-      </p>
+      <p v-if="!messages.length" class="dv-social-empty">Aun no hay mensajes en este chat.</p>
       <ChatMessage
         v-for="message in messages"
         :key="message.id"
         :message="message"
+        :current-user-id="currentUserId"
+        :current-user-role="currentUserRole"
+        :active-conversation-type="activeConversationType"
+        :is-editing="editingMessageId === message.id"
+        :editing-text="editingMessageText"
+        :is-delete-pending="deletingMessageId === message.id"
+        @user-click="emit('user-click', $event)"
+        @start-edit="emit('start-edit-message', $event)"
+        @delete-message="emit('delete-message', $event)"
+        @confirm-delete-message="emit('confirm-delete-message', $event)"
+        @cancel-delete-message="emit('cancel-delete-message')"
+        @update:editing-text="emit('update:editing-message-text', $event)"
+        @save-edit="emit('save-edit-message', $event)"
+        @cancel-edit="emit('cancel-edit-message')"
       />
     </div>
+
+    <UserInfoPopover
+      :visible="Boolean(userPopover?.visible)"
+      :user="userPopover?.user || null"
+      :loading="Boolean(userPopover?.loading)"
+      :error="userPopover?.error || ''"
+      :x="userPopover?.x || 0"
+      :y="userPopover?.y || 0"
+      :is-admin="Boolean(userPopover?.isAdmin)"
+      @close="emit('close-user-popover')"
+      @timeout-user="emit('timeout-user', $event)"
+      @ban-user="emit('ban-user', $event)"
+    />
 
     <button
       v-if="showScrollToLatest"

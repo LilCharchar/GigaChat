@@ -2,11 +2,11 @@
 import "../assets/css/dashboard-view.css";
 import { useDashboardView } from "../composables/useDashboardView";
 
-import Sidebar       from "../components/Sidebar.vue";
-import HeroHeader    from "../components/HeroHeader.vue";
-import FriendsPanel  from "../components/FriendsPanel.vue";
-import ChatPanel     from "../components/ChatPanel.vue";
-import ProfileModal  from "../components/ProfileModal.vue";
+import Sidebar from "../components/Sidebar.vue";
+import HeroHeader from "../components/HeroHeader.vue";
+import FriendsPanel from "../components/FriendsPanel.vue";
+import ChatPanel from "../components/ChatPanel.vue";
+import ProfileModal from "../components/ProfileModal.vue";
 
 const {
   // auth
@@ -28,9 +28,24 @@ const {
   clearDM,
   clearingDM,
 
+  editingMessageId,
+  editingMessageText,
+  deletingMessageId,
+  userPopover,
+  closeUserPopover,
+  openUserPopover,
+  startEditingMessage,
+  saveEditingMessage,
+  deleteMessage,
+  confirmDeleteMessage,
+  cancelDeleteMessage,
+  timeoutUserFromPopover,
+  banUserFromPopover,
+
   // mensajes
   activeMessages,
   draft,
+  bindMessagesContainerRef,
   messagesContainerRef,
   showScrollToLatest,
   pendingMessagesBelow,
@@ -73,7 +88,6 @@ const {
 
 <template>
   <main class="dv-shell">
-
     <!-- Capa 1: Sidebar -->
     <Sidebar
       :current-user="currentUser"
@@ -91,7 +105,6 @@ const {
 
     <!-- Capa 2: Área principal -->
     <section class="dv-main">
-
       <!-- Capa 3: Header (hero + panel social) -->
       <header class="dv-top">
         <HeroHeader
@@ -127,13 +140,35 @@ const {
       <ChatPanel
         :messages="activeMessages"
         :draft="draft"
+        :bind-messages-container-ref="bindMessagesContainerRef"
         :messages-container-ref="messagesContainerRef"
         :show-scroll-to-latest="showScrollToLatest"
         :pending-messages-below="pendingMessagesBelow"
+        :current-user-id="currentUser?.id || ''"
+        :current-user-role="currentUser?.role || ''"
+        :active-conversation-type="activeConversation?.type || 'channel'"
+        :editing-message-id="editingMessageId"
+        :editing-message-text="editingMessageText"
+        :deleting-message-id="deletingMessageId"
+        :user-popover="userPopover"
         @update:draft="draft = $event"
         @send-message="sendMessage"
         @jump-to-latest="jumpToLatestMessages"
         @messages-scroll="onMessagesScroll"
+        @user-click="openUserPopover"
+        @start-edit-message="startEditingMessage"
+        @delete-message="deleteMessage"
+        @confirm-delete-message="confirmDeleteMessage"
+        @cancel-delete-message="cancelDeleteMessage"
+        @update:editing-message-text="editingMessageText = $event"
+        @save-edit-message="saveEditingMessage"
+        @cancel-edit-message="
+          editingMessageId = '';
+          editingMessageText = '';
+        "
+        @close-user-popover="closeUserPopover"
+        @timeout-user="timeoutUserFromPopover"
+        @ban-user="banUserFromPopover"
       />
     </section>
 
@@ -156,6 +191,5 @@ const {
       @save="saveProfileChanges"
       @close="closeProfileModal"
     />
-
   </main>
 </template>
