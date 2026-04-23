@@ -19,5 +19,6 @@ router.post(
   requireAdmin,
   authController.clearUserTimeout
 );
+router.get("/admin/users/:userId", requireAuth, requireAdmin, authController.getUser);
 
 export default router;

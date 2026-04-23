@@ -135,6 +135,16 @@ const clearUserTimeout = async (req, res) => {
   }
 };
 
+const getUser = async (req, res) => {
+  try {
+    const { userId } = adminUserParamsSchema.parse(req.params);
+    const user = await authService.getCurrentUser(userId);
+    res.json({ user });
+  } catch (error) {
+    res.status(getStatusCode(error, 404)).json({ error: error.message });
+  }
+};
+
 export default {
   register,
   login,
@@ -146,4 +156,5 @@ export default {
   unbanUser,
   timeoutUser,
   clearUserTimeout,
+  getUser,
 };

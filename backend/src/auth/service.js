@@ -70,21 +70,21 @@ const login = async (data) => {
   const { email, password } = data;
 
   const result = await pool.query(
-    `SELECT u.id,
-            u.name,
-            u.username,
-            u.email,
-            u.bio,
-            u.avatar,
-            u.password_hash,
-            u.deleted_at,
-            u.banned_at,
-            u.timed_out_until,
-            u.created_at,
-            u.updated_at,
-            r.name AS role_name
-     FROM users
-     JOIN roles r ON r.id = u.role_id
+`SELECT u.id,
+             u.name,
+             u.username,
+             u.email,
+             u.bio,
+             u.avatar,
+             u.password_hash,
+             u.deleted_at,
+             u.banned_at,
+             u.timed_out_until,
+             u.created_at,
+             u.updated_at,
+             r.name AS role_name
+      FROM users u
+      JOIN roles r ON r.id = u.role_id
      WHERE email = $1
        AND u.deleted_at IS NULL
      ORDER BY u.created_at DESC
