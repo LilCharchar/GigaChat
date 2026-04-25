@@ -25,6 +25,8 @@ const {
   socketConnected,
   selectConversation,
   openDMWithFriend,
+  clearDM,
+  clearingDM,
 
   editingMessageId,
   editingMessageText,
@@ -110,7 +112,10 @@ const {
         <HeroHeader
           :conversation-name="activeConversation?.name || 'Global'"
           :conversation-type="activeConversation?.type || ''"
+          :conversation-id="activeConversation?.id || ''"
           :socket-connected="socketConnected"
+          :clearing-d-m="clearingDM"
+          @clear-dm="clearDM"
         />
 
         <FriendsPanel
