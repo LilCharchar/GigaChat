@@ -1,10 +1,5 @@
 import pool from "../config/db.js";
-
-function createHttpError(message, status) {
-  const error = new Error(message);
-  error.status = status;
-  return error;
-}
+import createHttpError from "../shared/createHttpError.js";
 
 async function getUserByUsername(username) {
   const result = await pool.query(

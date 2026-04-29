@@ -1,11 +1,6 @@
 import pool from "../config/db.js";
 import { assertUserCanWrite } from "../auth/service.js";
-
-function createHttpError(message, status) {
-  const error = new Error(message);
-  error.status = status;
-  return error;
-}
+import createHttpError from "../shared/createHttpError.js";
 
 export async function ensureUserIsActive(userId) {
   const result = await pool.query(
@@ -434,8 +429,6 @@ export async function isDMChatBetweenFriends(userId, chatId) {
 
 export async function clearDMMessages({ chatId, userId }) {
   await assertUserCanWrite(userId);
-
-  // Verificar que el chat existe, es un DM y el usuario es participante
   const result = await pool.query(
     `SELECT c.id
      FROM chats c
@@ -452,7 +445,6 @@ export async function clearDMMessages({ chatId, userId }) {
     throw createHttpError("Forbidden", 403);
   }
 
-  // Soft-delete de todos los mensajes activos del DM
   await pool.query(
     `UPDATE chat_messages
      SET deleted_at = NOW()

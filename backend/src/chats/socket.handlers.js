@@ -11,12 +11,13 @@ import {
 } from "./service.js";
 import { assertUserCanWrite } from "../auth/service.js";
 import { chatRoom, joinChatRoom, leaveChatRoom } from "../realtime/rooms.js";
+import getErrorStatus from "../shared/getErrorStatus.js";
 
 const MAX_MESSAGE_LENGTH = 4000;
 
 function toSocketError(error) {
   return {
-    code: error.status || 500,
+    code: getErrorStatus(error),
     message: error.message || "Internal error",
   };
 }

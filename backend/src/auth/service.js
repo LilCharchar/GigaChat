@@ -3,6 +3,7 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { getRealtimeServer } from "../realtime/index.js";
 import { userRoom } from "../realtime/rooms.js";
+import createHttpError from "../shared/createHttpError.js";
 
 const ACCESS_TOKEN_EXPIRES_IN = "1h";
 
@@ -24,15 +25,9 @@ function mapUser(row) {
   };
 }
 
-function createHttpError(message, status) {
-  const error = new Error(message);
-  error.status = status;
-  return error;
-}
-
 export function getJwtSecret() {
   if (!process.env.JWT_SECRET) {
-    throw new Error("Missing JWT_SECRET");
+    throw createHttpError("Missing JWT_SECRET", 500);
   }
 
   return process.env.JWT_SECRET;
@@ -56,13 +51,13 @@ const register = async (data) => {
       const constraint = error.constraint || "";
       const detail = error.detail || "";
       if (constraint.includes("email") || detail.includes("email")) {
-        throw new Error("El email ya está registrado", { cause: error });
+        throw createHttpError("El email ya está registrado", 409, { cause: error });
       }
       if (constraint.includes("username") || detail.includes("username")) {
-        throw new Error("El username ya está en uso", { cause: error });
+        throw createHttpError("El username ya está en uso", 409, { cause: error });
       }
     }
-    throw new Error(error.message, { cause: error });
+    throw createHttpError(error.message, 500, { cause: error });
   }
 };
 
@@ -70,7 +65,7 @@ const login = async (data) => {
   const { email, password } = data;
 
   const result = await pool.query(
-`SELECT u.id,
+    `SELECT u.id,
              u.name,
              u.username,
              u.email,
@@ -93,7 +88,7 @@ const login = async (data) => {
   );
 
   if (result.rows.length === 0) {
-    throw new Error("Invalid credentials");
+    throw createHttpError("Invalid credentials", 401);
   }
 
   const user = result.rows[0];
@@ -105,7 +100,7 @@ const login = async (data) => {
   const validPassword = await bcrypt.compare(password, user.password_hash);
 
   if (!validPassword) {
-    throw new Error("Invalid credentials");
+    throw createHttpError("Invalid credentials", 401);
   }
 
   const token = jwt.sign({ id: user.id, username: user.username }, getJwtSecret(), {
@@ -139,7 +134,7 @@ const getCurrentUser = async (id) => {
   );
 
   if (result.rows.length === 0 || result.rows[0].deleted_at) {
-    throw new Error("User not found");
+    throw createHttpError("User not found", 404);
   }
 
   return mapUser(result.rows[0]);
@@ -167,12 +162,12 @@ const updateProfile = async (id, data) => {
       try {
         return [key, Buffer.from(value, "base64")];
       } catch {
-        throw new Error("Invalid avatar base64");
+        throw createHttpError("Invalid avatar base64", 400);
       }
     });
 
   if (entries.length === 0) {
-    throw new Error("No fields to update");
+    throw createHttpError("No fields to update", 400);
   }
 
   const assignments = entries.map(([key], index) => `${allowedFields[key]} = $${index + 2}`);
@@ -199,7 +194,7 @@ const updateProfile = async (id, data) => {
     );
 
     if (result.rows.length === 0) {
-      throw new Error("User not found");
+      throw createHttpError("User not found", 404);
     }
 
     return mapUser(result.rows[0]);
@@ -208,7 +203,7 @@ const updateProfile = async (id, data) => {
       const constraint = error.constraint || "";
       const detail = error.detail || "";
       if (constraint.includes("username") || detail.includes("username")) {
-        throw new Error("El username ya está en uso", { cause: error });
+        throw createHttpError("El username ya está en uso", 409, { cause: error });
       }
     }
 

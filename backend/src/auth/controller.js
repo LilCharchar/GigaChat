@@ -7,12 +7,9 @@ import {
   updateProfileSchema,
 } from "./schemas.js";
 import authService from "./service.js";
+import getErrorStatus from "../shared/getErrorStatus.js";
 
 const ACCESS_COOKIE_NAME = "access_token";
-
-function getStatusCode(error, fallback) {
-  return Number(error?.status) || fallback;
-}
 
 function getCookieOptions() {
   const isProduction = process.env.NODE_ENV === "production";
@@ -31,7 +28,7 @@ const register = async (req, res) => {
     const user = await authService.register(data);
     res.status(201).json(user);
   } catch (error) {
-    res.status(400).json({ error: error.message });
+    res.status(getErrorStatus(error, 400)).json({ error: error.message });
   }
 };
 
@@ -42,7 +39,7 @@ const login = async (req, res) => {
     res.cookie(ACCESS_COOKIE_NAME, result.token, getCookieOptions());
     res.json({ user: result.user });
   } catch (error) {
-    res.status(getStatusCode(error, 401)).json({ error: error.message });
+    res.status(getErrorStatus(error, 401)).json({ error: error.message });
   }
 };
 
@@ -56,7 +53,7 @@ const me = async (req, res) => {
     const user = await authService.getCurrentUser(req.auth.id);
     res.json({ user });
   } catch (error) {
-    res.status(404).json({ error: error.message });
+    res.status(getErrorStatus(error, 404)).json({ error: error.message });
   }
 };
 
@@ -66,7 +63,7 @@ const updateProfile = async (req, res) => {
     const user = await authService.updateProfile(req.auth.id, data);
     res.json({ user });
   } catch (error) {
-    res.status(getStatusCode(error, 400)).json({ error: error.message });
+    res.status(getErrorStatus(error, 400)).json({ error: error.message });
   }
 };
 
@@ -76,7 +73,7 @@ const deleteMe = async (req, res) => {
     res.clearCookie(ACCESS_COOKIE_NAME, getCookieOptions());
     res.status(204).send();
   } catch (error) {
-    res.status(getStatusCode(error, 400)).json({ error: error.message });
+    res.status(getErrorStatus(error, 400)).json({ error: error.message });
   }
 };
 
@@ -93,7 +90,7 @@ const banUser = async (req, res) => {
 
     res.status(204).send();
   } catch (error) {
-    res.status(getStatusCode(error, 400)).json({ error: error.message });
+    res.status(getErrorStatus(error, 400)).json({ error: error.message });
   }
 };
 
@@ -103,7 +100,7 @@ const unbanUser = async (req, res) => {
     await authService.unbanUser(userId);
     res.status(204).send();
   } catch (error) {
-    res.status(getStatusCode(error, 400)).json({ error: error.message });
+    res.status(getErrorStatus(error, 400)).json({ error: error.message });
   }
 };
 
@@ -121,7 +118,7 @@ const timeoutUser = async (req, res) => {
 
     res.json({ timeoutUntil: timeout.timed_out_until });
   } catch (error) {
-    res.status(getStatusCode(error, 400)).json({ error: error.message });
+    res.status(getErrorStatus(error, 400)).json({ error: error.message });
   }
 };
 
@@ -131,7 +128,7 @@ const clearUserTimeout = async (req, res) => {
     await authService.clearUserTimeout(userId);
     res.status(204).send();
   } catch (error) {
-    res.status(getStatusCode(error, 400)).json({ error: error.message });
+    res.status(getErrorStatus(error, 400)).json({ error: error.message });
   }
 };
 
@@ -141,7 +138,7 @@ const getUser = async (req, res) => {
     const user = await authService.getCurrentUser(userId);
     res.json({ user });
   } catch (error) {
-    res.status(getStatusCode(error, 404)).json({ error: error.message });
+    res.status(getErrorStatus(error, 404)).json({ error: error.message });
   }
 };
 

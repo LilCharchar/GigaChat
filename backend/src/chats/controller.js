@@ -1,15 +1,12 @@
 import * as chatService from "./service.js";
-
-function getStatus(error) {
-  return error.status || 500;
-}
+import getErrorStatus from "../shared/getErrorStatus.js";
 
 export async function getGlobalChat(req, res) {
   try {
     const chat = await chatService.getGlobalChatForUser(req.auth.id);
     res.json({ chat });
   } catch (error) {
-    res.status(getStatus(error)).json({ error: error.message });
+    res.status(getErrorStatus(error)).json({ error: error.message });
   }
 }
 
@@ -23,7 +20,9 @@ export async function getChatMessages(req, res) {
         ? req.query.beforeCreatedAt.trim()
         : null;
     const beforeId =
-      typeof req.query.beforeId === "string" && req.query.beforeId.trim() ? req.query.beforeId.trim() : null;
+      typeof req.query.beforeId === "string" && req.query.beforeId.trim()
+        ? req.query.beforeId.trim()
+        : null;
     const result = await chatService.listChatMessages({
       chatId,
       userId: req.auth.id,
@@ -34,7 +33,7 @@ export async function getChatMessages(req, res) {
 
     res.json(result);
   } catch (error) {
-    res.status(getStatus(error)).json({ error: error.message });
+    res.status(getErrorStatus(error)).json({ error: error.message });
   }
 }
 
@@ -43,7 +42,7 @@ export async function getDMChats(req, res) {
     const dms = await chatService.listUserDMs(req.auth.id);
     res.json({ dms });
   } catch (error) {
-    res.status(getStatus(error)).json({ error: error.message });
+    res.status(getErrorStatus(error)).json({ error: error.message });
   }
 }
 
@@ -58,7 +57,7 @@ export async function openOrCreateDMWithFriend(req, res) {
     const chat = await chatService.getOrCreateDMWithFriend(req.auth.id, friendId);
     res.json({ chat });
   } catch (error) {
-    res.status(getStatus(error)).json({ error: error.message });
+    res.status(getErrorStatus(error)).json({ error: error.message });
   }
 }
 
@@ -73,6 +72,6 @@ export async function clearDMChat(req, res) {
     await chatService.clearDMMessages({ chatId, userId: req.auth.id });
     res.json({ ok: true });
   } catch (error) {
-    res.status(getStatus(error)).json({ error: error.message });
+    res.status(getErrorStatus(error)).json({ error: error.message });
   }
 }
