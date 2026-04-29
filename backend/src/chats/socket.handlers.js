@@ -171,7 +171,7 @@ export function registerChatSocketHandlers(io, socket) {
         throw createHttpError("Forbidden", 403);
       }
 
-      const updated = await updateMessageBody(messageId, body);
+      const updated = await updateMessageBody(messageId, body, socket.user.id);
       const eventPayload = formatMessage(updated);
       io.to(chatRoom(updated.chat_id)).emit("message:updated", eventPayload);
       ackSuccess(ack, eventPayload);

@@ -280,22 +280,89 @@ export async function isGlobalChatAdmin(userId, chatId) {
   return result.rows.length > 0;
 }
 
-export async function updateMessageBody(messageId, body) {
-  const result = await pool.query(
-    `UPDATE chat_messages
-     SET body = $2,
-         edited_at = NOW()
-     WHERE id = $1
-       AND deleted_at IS NULL
-     RETURNING id, chat_id, sender_id, body, client_message_id, created_at, edited_at, deleted_at`,
-    [messageId, body]
-  );
+export async function updateMessageBody(messageId, body, editedBy) {
+  const client = await pool.connect();
 
-  if (result.rows.length === 0) {
-    throw createHttpError("Message not found", 404);
+  try {
+    await client.query("BEGIN");
+
+    const currentResult = await client.query(
+      `SELECT cm.id,
+              cm.chat_id,
+              cm.sender_id,
+              cm.body,
+              cm.client_message_id,
+              cm.created_at,
+              cm.edited_at,
+              cm.deleted_at,
+              cm.edit_count,
+              u.name AS sender_name,
+              u.username AS sender_username,
+              u.bio AS sender_bio,
+              encode(u.avatar, 'base64') AS sender_avatar_base64
+       FROM chat_messages cm
+       JOIN users u ON u.id = cm.sender_id
+       WHERE cm.id = $1
+         AND cm.deleted_at IS NULL
+       FOR UPDATE OF cm`,
+      [messageId]
+    );
+
+    if (currentResult.rows.length === 0) {
+      throw createHttpError("Message not found", 404);
+    }
+
+    const current = currentResult.rows[0];
+
+    if (current.body === body) {
+      await client.query("COMMIT");
+      return current;
+    }
+
+    if (current.edit_count >= 3) {
+      throw createHttpError("Message edit limit reached", 400);
+    }
+
+    await client.query(
+      `INSERT INTO chat_message_edit_logs (message_id, previous_body, new_body, edited_by)
+       VALUES ($1, $2, $3, $4)`,
+      [messageId, current.body, body, editedBy]
+    );
+
+    const updatedResult = await client.query(
+      `WITH updated AS (
+         UPDATE chat_messages
+         SET body = $2,
+             edited_at = NOW(),
+             edit_count = edit_count + 1
+         WHERE id = $1
+         RETURNING id, chat_id, sender_id, body, client_message_id, created_at, edited_at, deleted_at
+       )
+       SELECT ucm.id,
+              ucm.chat_id,
+              ucm.sender_id,
+              ucm.body,
+              ucm.client_message_id,
+              ucm.created_at,
+              ucm.edited_at,
+              ucm.deleted_at,
+              u.name AS sender_name,
+              u.username AS sender_username,
+              u.bio AS sender_bio,
+              encode(u.avatar, 'base64') AS sender_avatar_base64
+       FROM updated ucm
+       JOIN users u ON u.id = ucm.sender_id`,
+      [messageId, body]
+    );
+
+    await client.query("COMMIT");
+    return updatedResult.rows[0];
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
   }
-
-  return result.rows[0];
 }
 
 export async function softDeleteMessage(messageId) {
