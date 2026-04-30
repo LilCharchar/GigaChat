@@ -407,17 +407,28 @@ export async function getOrCreateDMWithFriend(userId, friendId) {
   const user2_id = userId < friendId ? friendId : userId;
 
   let result = await pool.query(
-    `SELECT c.id, c.type, c.created_at, c.updated_at
+    `SELECT c.id, c.type, c.created_at, c.updated_at, c.is_active
      FROM chats c
      WHERE c.type = 'dm'
        AND c.dm_user1_id = $1
-       AND c.dm_user2_id = $2
-       AND c.is_active = TRUE`,
+       AND c.dm_user2_id = $2`,
     [user1_id, user2_id]
   );
 
   if (result.rows.length > 0) {
-    return result.rows[0];
+    const chat = result.rows[0];
+    if (!chat.is_active) {
+      await pool.query(
+        `UPDATE chats SET is_active = TRUE, updated_at = NOW() WHERE id = $1`,
+        [chat.id]
+      );
+      await pool.query(
+        `UPDATE chat_members SET left_at = NULL WHERE chat_id = $1 AND user_id IN ($2, $3)`,
+        [chat.id, user1_id, user2_id]
+      );
+      chat.is_active = true;
+    }
+    return chat;
   }
 
   const insertResult = await pool.query(
