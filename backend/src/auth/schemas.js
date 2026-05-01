@@ -13,12 +13,12 @@ function isValidUsernameFormat(value) {
 export const registerSchema = z.object({
   name: z.string().min(1).max(100),
   username: z.string().min(3).max(30),
-  email: z.email(),
+  email: z.string().trim().email("El email no es valido"),
   password: z.string().min(8),
 });
 
 export const loginSchema = z.object({
-  email: z.email(),
+  email: z.string().trim().email("El email no es valido"),
   password: z.string().min(1),
 });
 

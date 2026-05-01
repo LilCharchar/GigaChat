@@ -1,5 +1,7 @@
 <script setup>
-defineProps({
+import { onBeforeUnmount, ref, watch } from "vue";
+
+const props = defineProps({
   currentUser: { type: Object, required: true },
   conversations: { type: Array, required: true },
   dms: { type: Array, required: true },
@@ -10,11 +12,36 @@ defineProps({
   chatError: { type: String, default: "" },
 });
 
-const emit = defineEmits([
-  "select-conversation",
-  "open-profile",
-  "logout",
-]);
+const visibleChatError = ref(props.chatError);
+let clearErrorTimer = null;
+
+watch(
+  () => props.chatError,
+  (nextError) => {
+    if (clearErrorTimer) {
+      clearTimeout(clearErrorTimer);
+      clearErrorTimer = null;
+    }
+
+    visibleChatError.value = nextError;
+
+    if (nextError) {
+      clearErrorTimer = setTimeout(() => {
+        visibleChatError.value = "";
+        clearErrorTimer = null;
+      }, 5000);
+    }
+  },
+  { immediate: true }
+);
+
+onBeforeUnmount(() => {
+  if (clearErrorTimer) {
+    clearTimeout(clearErrorTimer);
+  }
+});
+
+const emit = defineEmits(["select-conversation", "open-profile", "logout"]);
 </script>
 
 <template>
@@ -61,7 +88,7 @@ const emit = defineEmits([
       </div>
 
       <p v-if="loadingChat" class="dv-social-empty">Cargando chat global...</p>
-      <p v-else-if="chatError" class="dv-social-error">{{ chatError }}</p>
+      <p v-else-if="visibleChatError" class="dv-social-error">{{ visibleChatError }}</p>
 
       <button
         v-for="conversation in conversations"
@@ -72,7 +99,7 @@ const emit = defineEmits([
         @click="emit('select-conversation', conversation.id)"
       >
         <strong>{{ conversation.name }}</strong>
-        <span>{{ conversation.unread || conversation.members }}</span>
+        <span v-if="conversation.unread">{{ conversation.unread }}</span>
       </button>
     </section>
 
@@ -88,13 +115,16 @@ const emit = defineEmits([
       <button
         v-for="dm in dms"
         :key="dm.id"
-        class="dv-room"
+        class="dv-room dv-dm-item"
         :class="{ 'is-active': dm.id === activeConversationId }"
         type="button"
         @click="emit('select-conversation', dm.id)"
       >
+        <div class="dv-dm-avatar">
+          <img v-if="dm.avatarBase64" :src="`data:;base64,${dm.avatarBase64}`" :alt="dm.name" />
+          <span v-else>{{ (dm.name || "?").slice(0, 1).toUpperCase() }}</span>
+        </div>
         <strong>{{ dm.name }}</strong>
-        <span>{{ dm.unread }}</span>
       </button>
 
       <p v-if="!dms.length && !loadingDMs" class="dv-social-empty">
@@ -103,12 +133,7 @@ const emit = defineEmits([
     </section>
 
     <!-- Logout -->
-    <button
-      class="dv-logout"
-      :disabled="loadingAuth"
-      type="button"
-      @click="emit('logout')"
-    >
+    <button class="dv-logout" :disabled="loadingAuth" type="button" @click="emit('logout')">
       {{ loadingAuth ? "Saliendo..." : "Cerrar sesion" }}
     </button>
   </aside>

@@ -35,6 +35,7 @@ function createDMConversation(dm, friendName, friendUsername) {
   return {
     id: dm.id,
     name: friendName || friendUsername || "Usuario",
+    avatarBase64: dm.friend_avatar_base64 || null,
     topic: `Conversación directa con ${friendName || friendUsername}`,
     status: "En línea",
     mode: "direct message",

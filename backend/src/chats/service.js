@@ -418,10 +418,9 @@ export async function getOrCreateDMWithFriend(userId, friendId) {
   if (result.rows.length > 0) {
     const chat = result.rows[0];
     if (!chat.is_active) {
-      await pool.query(
-        `UPDATE chats SET is_active = TRUE, updated_at = NOW() WHERE id = $1`,
-        [chat.id]
-      );
+      await pool.query(`UPDATE chats SET is_active = TRUE, updated_at = NOW() WHERE id = $1`, [
+        chat.id,
+      ]);
       await pool.query(
         `UPDATE chat_members SET left_at = NULL WHERE chat_id = $1 AND user_id IN ($2, $3)`,
         [chat.id, user1_id, user2_id]
@@ -471,7 +470,11 @@ export async function listUserDMs(userId) {
             CASE 
               WHEN c.dm_user1_id = $1 THEN u2.username
               ELSE u1.username
-            END AS friend_username
+            END AS friend_username,
+            CASE 
+              WHEN c.dm_user1_id = $1 THEN encode(u2.avatar, 'base64')
+              ELSE encode(u1.avatar, 'base64')
+            END AS friend_avatar_base64
      FROM chats c
      JOIN chat_members cm ON cm.chat_id = c.id
      LEFT JOIN users u1 ON u1.id = c.dm_user1_id

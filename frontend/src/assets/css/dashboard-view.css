@@ -187,8 +187,38 @@
   place-items: center;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.08);
-  color: var(--dv-text);
-  font-size: 0.75rem;
+}
+
+.dv-dm-avatar {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.dv-dm-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.dv-dm-avatar span {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--dv-muted);
+}
+
+.dv-dm-item {
+  justify-content: flex-start !important;
+}
+
+.dv-dm-item strong {
+  margin-left: 0.75rem;
 }
 
 .dv-logout,

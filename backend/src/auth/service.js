@@ -7,6 +7,27 @@ import createHttpError from "../shared/createHttpError.js";
 
 const ACCESS_TOKEN_EXPIRES_IN = "1h";
 
+function getUniqueViolationField(error) {
+  if (!error || error.code !== "23505") {
+    return null;
+  }
+
+  const raw = [error.constraint, error.detail, error.column, error.message]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+
+  if (raw.includes("email")) {
+    return "email";
+  }
+
+  if (raw.includes("username")) {
+    return "username";
+  }
+
+  return null;
+}
+
 function mapUser(row) {
   const avatarBase64 = row.avatar ? Buffer.from(row.avatar).toString("base64") : null;
 
@@ -47,16 +68,16 @@ const register = async (data) => {
     );
     return mapUser(result.rows[0]);
   } catch (error) {
-    if (error.code === "23505") {
-      const constraint = error.constraint || "";
-      const detail = error.detail || "";
-      if (constraint.includes("email") || detail.includes("email")) {
-        throw createHttpError("El email ya está registrado", 409, { cause: error });
-      }
-      if (constraint.includes("username") || detail.includes("username")) {
-        throw createHttpError("El username ya está en uso", 409, { cause: error });
-      }
+    const duplicatedField = getUniqueViolationField(error);
+
+    if (duplicatedField === "email") {
+      throw createHttpError("El email ya está registrado", 409, { cause: error });
     }
+
+    if (duplicatedField === "username") {
+      throw createHttpError("El username ya está en uso", 409, { cause: error });
+    }
+
     throw createHttpError(error.message, 500, { cause: error });
   }
 };
@@ -199,12 +220,10 @@ const updateProfile = async (id, data) => {
 
     return mapUser(result.rows[0]);
   } catch (error) {
-    if (error.code === "23505") {
-      const constraint = error.constraint || "";
-      const detail = error.detail || "";
-      if (constraint.includes("username") || detail.includes("username")) {
-        throw createHttpError("El username ya está en uso", 409, { cause: error });
-      }
+    const duplicatedField = getUniqueViolationField(error);
+
+    if (duplicatedField === "username") {
+      throw createHttpError("El username ya está en uso", 409, { cause: error });
     }
 
     throw error;
